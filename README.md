@@ -56,22 +56,9 @@ bun run test                # installed carrier unit sweep (src/)
 bun test ./tests/frame-cost.oracle.ts   # grid pass GPU cost at 1080p (headed Chromium, host GPU)
 ```
 
-### Against a local engine
+### Linking to a local engine
 
-`@dylanebert/shallot` is a peer dependency on the published range `>=0.9.5`; the dev dependency is pinned to the exact Git commit. To test against an unreleased engine, link it and its `typegpu` too:
-
-```bash
-# in your shallot checkout
-bun link
-cd node_modules/typegpu && bun link
-
-# here
-bun link @dylanebert/shallot
-bun link typegpu
-bun test src
-```
-
-Run `bun install --frozen-lockfile --force` here to replace the local links with the exact Shallot dependency recorded in `bun.lock`.
+To iterate against an unreleased engine, keep the published range in `package.json` and link at the consumer. Run `bun link` here once, then `bun link @dylanebert/shallot-grid` in the consumer and set `resolve.dedupe: ["@dylanebert/shallot", "typegpu"]` in its Vite config. The linked plugin runs on the consumer's engine and typegpu instead of its own copies. To return to the registry, run `bun install` in the consumer.
 
 ## Releasing
 
