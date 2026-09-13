@@ -1,6 +1,6 @@
 {
     "name": "@dylanebert/shallot-grid",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "description": "Infinite world grid with axis lines for Shallot: a fullscreen ray-plane pass that blends decade levels so it reads at any zoom.",
     "license": "MIT",
     "author": "Dylan Ebert <dylan.ebert@gmail.com>",
