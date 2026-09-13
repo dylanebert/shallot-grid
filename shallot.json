@@ -9,6 +9,9 @@
         },
         {
             "file": "src/world-grid.test.ts"
+        },
+        {
+            "file": "tests/frame-cost.oracle.ts"
         }
     ]
 }

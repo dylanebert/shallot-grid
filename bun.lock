@@ -6,7 +6,7 @@
       "name": "@dylanebert/shallot-grid",
       "devDependencies": {
         "@biomejs/biome": "^2.5.13",
-        "@dylanebert/shallot": "github:dylanebert/shallot#944bd51168f2960ff32c440e95b22f02bba8345b",
+        "@dylanebert/shallot": "github:dylanebert/shallot#45a1e7bbcfd9bc032082019a573eddeda496d496",
         "@types/bun": "latest",
         "@webgpu/types": "^0.1.72",
         "playwright": "^1.63.0",
@@ -64,7 +64,7 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.5.13", "", { "os": "win32", "cpu": "x64" }, "sha512-VOofU/nW761XWzUeUNE8zzYNyPrxuMuNFMizL0qz7J75yeV8N7WFheUlk1/K6dOkaFpH9wJ+lDKlwjAbw0346w=="],
 
-    "@dylanebert/shallot": ["@dylanebert/shallot@github:dylanebert/shallot#944bd51", { "dependencies": { "@babel/parser": "^8.0.4", "@types/node": "^26.2.0", "@webgpu/types": "^0.1.72", "unplugin-typegpu": "~0.12.3", "vite": "^8.3.0" }, "peerDependencies": { "bun-webgpu": ">=0.1.7", "playwright": "^1.0.0", "typegpu": "~0.12.5" }, "optionalPeers": ["bun-webgpu", "playwright"], "bin": { "shallot": "./bin/shallot.ts" } }, "dylanebert-shallot-944bd51", "sha512-TCMfXJMnWr9FVE2TO2BF4i6ZCXKYmWMkvp/IYS0S5n4KFDdv6zUUiA65CxFkaPUURTi8pwsRveX3gpVdr94ehQ=="],
+    "@dylanebert/shallot": ["@dylanebert/shallot@github:dylanebert/shallot#45a1e7b", { "dependencies": { "@babel/parser": "^8.0.4", "@types/node": "^26.2.0", "@webgpu/types": "^0.1.72", "unplugin-typegpu": "~0.12.3", "vite": "^8.3.0" }, "peerDependencies": { "bun-webgpu": ">=0.1.7", "playwright": "^1.0.0", "typegpu": "~0.12.5" }, "optionalPeers": ["bun-webgpu", "playwright"], "bin": { "shallot": "./bin/shallot.ts" } }, "dylanebert-shallot-45a1e7b", "sha512-OvhIH3t8DlCRVtX4mKXqpVcuvilIDCfyhQR/ezplgCWi7BVlididAlw+bjs6TUNIDqKhh8xdeCBevIgoRGruZg=="],
 
     "@dylanebert/shallot-grid": ["@dylanebert/shallot-grid@root:", {}],
 

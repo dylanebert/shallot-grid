@@ -130,6 +130,7 @@ function drawGrid(camera: number, view: View): void {
         label: "grid",
         colorAttachments: [{ view: view.framebuffer, loadOp: "load", storeOp: "store" }],
         depthStencilAttachment: { view: view.depth, depthLoadOp: "load", depthStoreOp: "store" },
+        timestampWrites: Compute.span?.("grid"),
     });
     pass.setPipeline(gpu.pipeline);
     pass.setBindGroup(0, gpu.bindGroup);

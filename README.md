@@ -39,6 +39,7 @@ Every field is optional. Colors are sRGB hex with alpha (`0xRRGGBBAA`), and an a
 
 - `src/`: the plugin (`index.ts`) and its shader (`shader.ts`)
 - `examples/world-grid`: I want an infinite reference grid with world axes under my scene. Run it with `bunx shallot dev examples/world-grid`.
+- `tests/frame-cost.oracle.ts`: the `shallot-grid-frame-cost` oracle, which profiles the example at 1920×1080 in headed Chromium and refuses a grid pass over 0.5 ms of GPU time
 
 ## Developing
 
@@ -48,6 +49,7 @@ bun run list                # installed Shallot carrier population
 bun run workflow            # regenerate the hosted surface workflow
 bun run check               # tsc + Biome + carrier declaration/drift checks
 bun run test                # installed carrier unit sweep (src/)
+bun test ./tests/frame-cost.oracle.ts   # grid pass GPU cost at 1080p (headed Chromium, host GPU)
 ```
 
 ### Against a local engine
