@@ -1,0 +1,11 @@
+{
+    "kind": "recipe",
+    "description": "Draw an infinite world grid with X, Y and Z axis lines under an orbit camera.",
+    "problem": "I want an infinite reference grid with world axes under my scene",
+    "scene": "scenes/main.scene",
+    "plugins": {
+        "Orbit": true,
+        "Grid": "@dylanebert/shallot-grid",
+        "WorldGridHarness": "./src/harness"
+    }
+}

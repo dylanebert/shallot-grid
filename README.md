@@ -38,7 +38,7 @@ Every field is optional. Colors are sRGB hex with alpha (`0xRRGGBBAA`), and an a
 ## Layout
 
 - `src/`: the plugin (`index.ts`) and its shader (`shader.ts`)
-- `examples/`: sample Shallot projects (in development)
+- `examples/world-grid`: I want an infinite reference grid with world axes under my scene. Run it with `bunx shallot dev examples/world-grid`.
 
 ## Developing
 
