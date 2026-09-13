@@ -1,0 +1,11 @@
+<scene>
+    <a grid />
+
+    <a
+        id="camera"
+        camera="far: 100000"
+        sear
+        orbit="distance: 10; yaw: 0.785; pitch: 0.5; max-distance: 20000; smoothness: 1"
+        transform
+    />
+</scene>

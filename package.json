@@ -10,7 +10,11 @@
     },
     "homepage": "https://github.com/dylanebert/shallot-grid",
     "bugs": "https://github.com/dylanebert/shallot-grid/issues",
-    "keywords": ["webgpu", "grid", "shallot"],
+    "keywords": [
+        "webgpu",
+        "grid",
+        "shallot"
+    ],
     "type": "module",
     "sideEffects": false,
     "packageManager": "bun@1.4.2",
@@ -20,7 +24,10 @@
     "exports": {
         ".": "./src/index.ts"
     },
-    "files": ["src", "!src/**/*.test.ts"],
+    "files": [
+        "src",
+        "!src/**/*.test.ts"
+    ],
     "scripts": {
         "check": "tsc --noEmit && biome check && shallot check",
         "list": "shallot list",
@@ -33,11 +40,15 @@
     },
     "devDependencies": {
         "@biomejs/biome": "^2.5.13",
-        "@dylanebert/shallot": "github:dylanebert/shallot#ea8287e751d16a71808224f075e92779771c7da3",
+        "@dylanebert/shallot": "github:dylanebert/shallot#944bd51168f2960ff32c440e95b22f02bba8345b",
         "@types/bun": "latest",
         "@webgpu/types": "^0.1.72",
+        "playwright": "^1.63.0",
         "typegpu": "~0.12.5",
         "typescript": "^7.0.2",
         "unplugin-typegpu": "~0.12.3"
-    }
+    },
+    "workspaces": [
+        "examples/*"
+    ]
 }
