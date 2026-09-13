@@ -123,3 +123,19 @@ check(
             throw new Error(`floor packs ${packed(GRID_DEFAULTS)[GRID_AT.floor]} and ${got}`);
     },
 );
+
+check(
+    "grid: xray defaults to 0 and packs clamped at its declared lane",
+    { claim: "the default grid draws through scene geometry" },
+    () => {
+        if (GRID_DEFAULTS.xray !== 0) throw new Error(`xray defaults to ${GRID_DEFAULTS.xray}`);
+        const { offsets } = declaredLayout(GRID_SHADER, "Grid");
+        if (offsets.xray !== GRID_AT.xray * 4)
+            throw new Error(
+                `Grid.xray declared at byte ${offsets.xray}, packed at ${GRID_AT.xray * 4}`,
+            );
+        const got = [0, 0.5, 2, -1].map((xray) => packed({ ...GRID_DEFAULTS, xray })[GRID_AT.xray]);
+        if (JSON.stringify(got) !== JSON.stringify([0, 0.5, 1, 0]))
+            throw new Error(`xray 0, 0.5, 2, -1 packs ${JSON.stringify(got)}`);
+    },
+);

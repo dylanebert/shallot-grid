@@ -1,6 +1,8 @@
 <scene>
     <a grid />
 
+    <a id="box" part transform="pos: -1.5 0.75 1.5" color="rgba: 0.95 0.55 0.2" />
+
     <a
         id="camera"
         camera="far: 100000"
