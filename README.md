@@ -1,6 +1,6 @@
 # shallot-grid
 
-An infinite world grid with axis lines for [Shallot](https://github.com/dylanebert/shallot). A fullscreen ray-plane pass that blends decade levels so it reads at any zoom, with X, Y and Z axis lines.
+An infinite world grid with axis lines for [Shallot](https://github.com/dylanebert/shallot). One fullscreen pass draws the y=0 plane. Each pixel picks two decade levels from its own screen footprint and cross-fades between them, so the grid reads at any zoom without popping. The horizon fade scales with camera height, and red X, green Y and blue Z axis lines draw in the same pass.
 
 ## Enabling it
 
@@ -22,12 +22,22 @@ Name it in `shallot.json`:
 Add a `<a grid />` singleton to your scene to show it:
 
 ```
-<a grid="neutral: 0x504945; axisX: 0xcc241d; axisY: 0x6b9d65; axisZ: 0x458588; opacity: 1; fade: 1; cells: 4" />
+<a grid />
 ```
+
+Every field is optional. Colors are sRGB hex with alpha (`0xRRGGBBAA`), and an axis with alpha `00` is hidden:
+
+```
+<a grid="neutral: 0x504945ff; axis-x: 0xcc241dff; axis-y: 0x6b9d65ff; axis-z: 0x458588ff; opacity: 1; fade: 20; cells: 10" />
+```
+
+- `opacity`: the whole grid's opacity.
+- `fade`: horizon fade reach in camera heights; `0` turns it off.
+- `cells`: pixels per cell at a decade boundary; the finest level's cells span `cells / 10` to `cells` pixels.
 
 ## Layout
 
-- `src/`: the plugin (`index.ts`)
+- `src/`: the plugin (`index.ts`) and its shader (`shader.ts`)
 - `examples/`: sample Shallot projects (in development)
 
 ## Developing
