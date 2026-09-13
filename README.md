@@ -58,7 +58,7 @@ bun test ./tests/frame-cost.oracle.ts   # grid pass GPU cost at 1080p (headed Ch
 
 ### Linking to a local engine
 
-To iterate against an unreleased engine, keep the published range in `package.json` and link at the consumer. Run `bun link` here once, then `bun link @dylanebert/shallot-grid` in the consumer and set `resolve.dedupe: ["@dylanebert/shallot", "typegpu"]` in its Vite config. The linked plugin runs on the consumer's engine and typegpu instead of its own copies. To return to the registry, run `bun install` in the consumer.
+To iterate against an unreleased engine, keep the published range in `package.json` and link at the consumer. Run `bun link` here once, then `bun link @dylanebert/shallot-grid` in the consumer and set `resolve.dedupe: ["@dylanebert/shallot", "typegpu"]` in its Vite config. The linked plugin runs on the consumer's engine and typegpu instead of its own copies. To return to the registry, run `bun install --force` in the consumer; a plain `bun install` keeps the link.
 
 ## Releasing
 
