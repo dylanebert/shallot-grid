@@ -1,15 +1,20 @@
 // The world grid shader: one fullscreen ray-plane pass over the y=0 plane plus the vertical Y axis.
 //
-// Decade blend. The plane point's screen footprint is `f = max(fwidth(p.x), fwidth(p.z))`, metres per
-// pixel. With the cells constant `k`, `l = log10(f * k)` names the decade: the finer level's cell is
-// `10^floor(l)` metres and spans between k/10 and k pixels, the coarser level's is `10^(floor(l)+1)`
-// and spans between k and 10k pixels. Both draw with Ben Golus's pristine line primitive (PlayCanvas
-// `scripts/esm/grid.mjs`, `pristineGrid`) at a constant screen width, so a level whose cells approach
-// pixel size resolves to its mean coverage instead of moiré. The finer level is weighted
-// `1 - fract(l)` and the coarser level at full weight, combined with `max`. Every coarse line is also
-// a fine line, so as `fract(l)` reaches 1 the fine level has faded to nothing and the coarse level
-// alone remains, and at the next decade that coarse level becomes the fine level at weight 1. Nothing
-// pops, and no zoom runs out of levels.
+// Decade blend, per direction. Lines across x (constant x) read their footprint `f = fwidth(p.x)`, metres
+// per pixel along x, and lines across z read `fwidth(p.z)`, so a grazing view that stretches one direction
+// never fuses the other. With the cells constant `k`, `l = log10(f * k)` names each direction's decade:
+// the finer level's cell is `max(10^floor(l), floor)` metres and the coarser level's is ten times that.
+// An unfloored finer cell spans between k/10 and k pixels and its coarser cell between k and 10k. Both
+// draw with Ben Golus's pristine line primitive (PlayCanvas `scripts/esm/grid.mjs`, `pristineGrid`) at a
+// constant screen width. The finer level is weighted by its cell size in pixels,
+// `smoothstep(k/10, k, cellPx)`, Blender's `overlay_grid_frag.glsl` shape: at the default `k` of 40 it is
+// gone by 4 px and full by 40 px, so no level draws with cells near line width. The coarser level draws
+// at full weight, combined with `max`. Every coarse line is also a fine line, so as the fine level's
+// cells shrink to k/10 pixels it has faded to nothing, and at the next decade the coarse level, at k
+// pixels, becomes the fine level at full weight. Nothing pops, and no zoom runs out of levels.
+//
+// Floor. The finest decade never drops under `floor` metres: below the zoom where it would, the floored
+// level grows on screen at full weight and no finer level appears.
 //
 // View-relative fade. The footprint already fades the fine level. The plane also fades toward the
 // horizon by `1 - smoothstep(0, fade * h, dist)`, where `h` is the camera's height above the plane and
@@ -22,7 +27,9 @@
 // plane.
 //
 // Depth is reverse-Z (near 1, far 0): the pass tests `greater-equal` with depth writes off and writes
-// the winning element's depth through `frag_depth`.
+// the winning element's depth through `frag_depth`. A grid has no edge of range: a plane or axis point
+// beyond the camera's far plane still draws, its depth clamped to the far plane's 0, so the horizon fade
+// alone ends the grid. Only a point behind the camera or nearer than the near plane is rejected.
 
 /** f32 lane offsets of the `Grid` uniform, as the WGSL struct below lays it out. */
 export const GRID_AT = {
@@ -34,10 +41,11 @@ export const GRID_AT = {
     axisY: 44,
     axisZ: 48,
     params: 52,
+    floor: 56,
 } as const;
 
 /** byte size of the `Grid` uniform. */
-export const GRID_BYTES = 224;
+export const GRID_BYTES = 240;
 /** `Grid` uniform size in f32 lanes. */
 export const GRID_FLOATS = GRID_BYTES / 4;
 
@@ -51,6 +59,7 @@ struct Grid {
     axisY: vec4<f32>,
     axisZ: vec4<f32>,
     params: vec4<f32>,
+    floor: f32,
 }
 
 @group(0) @binding(0) var<uniform> grid: Grid;
@@ -90,17 +99,29 @@ struct FragOut {
     @location(0) color: vec4<f32>,
 }
 
-// Ben Golus's pristine grid for thin lines: uv in cells, deriv the per-axis cell footprint of one pixel,
-// width the line width in cells. Coverage fades to the line's mean coverage as cells shrink under a pixel.
-fn pristine(uv: vec2<f32>, deriv: vec2<f32>, width: vec2<f32>) -> f32 {
-    let goal = min(width, vec2(0.5));
-    let drawWidth = clamp(goal, deriv, vec2(0.5));
+// Ben Golus's pristine grid for thin lines along one direction: u in cells, deriv the cell footprint of one
+// pixel, width the line width in cells. Coverage fades to the line's mean coverage as cells shrink under a pixel.
+fn pristine(u: f32, deriv: f32, width: f32) -> f32 {
+    let goal = min(width, 0.5);
+    let drawWidth = clamp(goal, deriv, 0.5);
     let aa = deriv * 1.5;
-    let g = 1.0 - abs(fract(uv) * 2.0 - 1.0);
+    let g = 1.0 - abs(fract(u) * 2.0 - 1.0);
     var g2 = 1.0 - smoothstep(drawWidth - aa, drawWidth + aa, g);
     g2 = g2 * saturate(goal / drawWidth);
-    g2 = mix(g2, goal, saturate(deriv * 2.0 - 1.0));
-    return mix(g2.x, 1.0, g2.y);
+    return mix(g2, goal, saturate(deriv * 2.0 - 1.0));
+}
+
+// one direction's two decade levels: coord the plane coordinate, f its footprint in metres per pixel,
+// deriv its anti-aliasing footprint
+fn decades(coord: f32, f: f32, deriv: f32, cells: f32, minCell: f32) -> f32 {
+    let foot = max(f, 1e-12);
+    let l = log(foot * cells) * INV_LN10;
+    let fine = max(pow(10.0, floor(l)), minCell);
+    let coarse = fine * 10.0;
+    let fineWeight = smoothstep(cells * 0.1, cells, fine / foot);
+    let gFine = pristine(coord / fine, deriv / fine, deriv * LINE_PX / fine);
+    let gCoarse = pristine(coord / coarse, deriv / coarse, deriv * LINE_PX / coarse);
+    return max(gCoarse, gFine * fineWeight);
 }
 
 fn axisCoverage(px: f32) -> f32 {
@@ -110,7 +131,8 @@ fn axisCoverage(px: f32) -> f32 {
 fn depthOf(p: vec3<f32>) -> f32 {
     let clip = grid.viewProj * vec4(p, 1.0);
     if (clip.w <= 0.0) { return -1.0; }
-    return clip.z / clip.w;
+    // past the far plane clamps to the far plane's depth
+    return max(clip.z / clip.w, 0.0);
 }
 
 fn over(front: vec4<f32>, back: vec4<f32>) -> vec4<f32> {
@@ -125,6 +147,7 @@ fn fs(input: VSOut) -> FragOut {
     let opacity = grid.params.x;
     let fade = grid.params.y;
     let cells = max(grid.params.z, 1e-3);
+    let minCell = max(grid.floor, 0.0);
 
     let origin = input.nearPoint;
     let ray = input.farPoint - input.nearPoint;
@@ -135,7 +158,8 @@ fn fs(input: VSOut) -> FragOut {
     let dx = dpdx(p.xz);
     let dy = dpdy(p.xz);
     let deriv = vec2(length(vec2(dx.x, dy.x)), length(vec2(dx.y, dy.y)));
-    let f = max(fwidth(p.x), fwidth(p.z));
+    let fx = fwidth(p.x);
+    let fz = fwidth(p.z);
 
     // Y axis: closest approach of the ray to x=z=0, measured in the xz plane
     let rayXZ = ray.xz;
@@ -153,13 +177,9 @@ fn fs(input: VSOut) -> FragOut {
         planeDepth = depthOf(p);
     }
     if (hit && planeDepth >= 0.0 && planeDepth <= 1.0) {
-        let l = log(f * cells) * INV_LN10;
-        let fine = pow(10.0, floor(l));
-        let coarse = fine * 10.0;
-        let fineWeight = 1.0 - fract(l);
-        let gFine = pristine(p.xz / fine, deriv / fine, deriv * LINE_PX / fine);
-        let gCoarse = pristine(p.xz / coarse, deriv / coarse, deriv * LINE_PX / coarse);
-        var alpha = max(gCoarse, gFine * fineWeight) * grid.neutral.a;
+        let gx = decades(p.x, fx, deriv.x, cells, minCell);
+        let gz = decades(p.z, fz, deriv.y, cells, minCell);
+        var alpha = mix(gx, 1.0, gz) * grid.neutral.a;
         var color = grid.neutral.rgb;
 
         let xCov = axisCoverage(abs(p.z) / max(deriv.y, 1e-12)) * grid.axisX.a;

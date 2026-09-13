@@ -107,3 +107,19 @@ check(
         }
     },
 );
+
+check(
+    "grid: floor defaults to a metre and packs at its declared lane",
+    { claim: "the default grid draws decades finer than a metre" },
+    () => {
+        if (GRID_DEFAULTS.floor !== 1) throw new Error(`floor defaults to ${GRID_DEFAULTS.floor}`);
+        const { offsets } = declaredLayout(GRID_SHADER, "Grid");
+        if (offsets.floor !== GRID_AT.floor * 4)
+            throw new Error(
+                `Grid.floor declared at byte ${offsets.floor}, packed at ${GRID_AT.floor * 4}`,
+            );
+        const got = packed({ ...GRID_DEFAULTS, floor: 0.25 })[GRID_AT.floor];
+        if (packed(GRID_DEFAULTS)[GRID_AT.floor] !== 1 || got !== 0.25)
+            throw new Error(`floor packs ${packed(GRID_DEFAULTS)[GRID_AT.floor]} and ${got}`);
+    },
+);

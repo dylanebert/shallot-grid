@@ -1,6 +1,6 @@
 # shallot-grid
 
-An infinite world grid with axis lines for [Shallot](https://github.com/dylanebert/shallot). One fullscreen pass draws the y=0 plane. Each pixel picks two decade levels from its own screen footprint and cross-fades between them, so the grid reads at any zoom without popping. The horizon fade scales with camera height, and red X, green Y and blue Z axis lines draw in the same pass.
+An infinite world grid with axis lines for [Shallot](https://github.com/dylanebert/shallot). One fullscreen pass draws the y=0 plane. Each pixel picks two decade levels per line direction from its own screen footprint and cross-fades between them, so the grid reads at any zoom without popping. The horizon fade scales with camera height, and red X, green Y and blue Z axis lines draw in the same pass.
 
 ## Enabling it
 
@@ -28,12 +28,13 @@ Add a `<a grid />` singleton to your scene to show it:
 Every field is optional. Colors are sRGB hex with alpha (`0xRRGGBBAA`), and an axis with alpha `00` is hidden:
 
 ```
-<a grid="neutral: 0x504945ff; axis-x: 0xcc241dff; axis-y: 0x6b9d65ff; axis-z: 0x458588ff; opacity: 1; fade: 20; cells: 10" />
+<a grid="neutral: 0x504945ff; axis-x: 0xcc241dff; axis-y: 0x6b9d65ff; axis-z: 0x458588ff; opacity: 1; fade: 20; cells: 40; floor: 1" />
 ```
 
 - `opacity`: the whole grid's opacity.
 - `fade`: horizon fade reach in camera heights; `0` turns it off.
-- `cells`: pixels per cell at a decade boundary; the finest level's cells span `cells / 10` to `cells` pixels.
+- `cells`: pixels per cell at a decade boundary; the finest level fades in as its cells grow from `cells / 10` to `cells` pixels, so at `40` it is gone by 4 px and full by 40 px.
+- `floor`: the smallest cell in metres; no finer decade draws, and closer in that level grows on screen.
 
 ## Layout
 

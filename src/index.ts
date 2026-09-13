@@ -30,7 +30,7 @@ import { GRID_AT, GRID_BYTES, GRID_FLOATS, GRID_SHADER } from "./shader";
  *
  * @example
  * ```
- * <a grid="axis-y: 0x6b9d6500; fade: 40; cells: 12" />
+ * <a grid="axis-y: 0x6b9d6500; fade: 40; cells: 48; floor: 0.1" />
  * ```
  */
 export const Grid = {
@@ -46,8 +46,10 @@ export const Grid = {
     opacity: sparse(f32),
     /** horizon fade reach in camera heights: the plane fades out by `fade × height` (0 = off) */
     fade: sparse(f32),
-    /** pixels per cell at a decade boundary: the finest level's cells span k/10 to k pixels */
+    /** pixels per cell at a decade boundary: the finer level fades in as its cells grow from k/10 to k pixels */
     cells: sparse(f32),
+    /** smallest cell in metres: no finer decade draws, and below it this level grows on screen */
+    floor: sparse(f32),
 };
 
 /** the look a `Grid` singleton carries, one number per field. */
@@ -60,7 +62,8 @@ export const GRID_DEFAULTS: GridStyle = {
     axisZ: 0x458588ff,
     opacity: 1,
     fade: 20,
-    cells: 10,
+    cells: 40,
+    floor: 1,
 };
 
 function packColorAt(rgba: number, out: Float32Array, at: number): void {
@@ -81,6 +84,7 @@ export function packGrid(style: GridStyle, out: Float32Array): void {
     out[GRID_AT.params + 1] = style.fade;
     out[GRID_AT.params + 2] = style.cells;
     out[GRID_AT.params + 3] = 0;
+    out[GRID_AT.floor] = style.floor;
 }
 
 function readGrid(eid: number): GridStyle {
@@ -92,6 +96,7 @@ function readGrid(eid: number): GridStyle {
         opacity: Grid.opacity.get(eid),
         fade: Grid.fade.get(eid),
         cells: Grid.cells.get(eid),
+        floor: Grid.floor.get(eid),
     };
 }
 
