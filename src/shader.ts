@@ -21,15 +21,21 @@
 // `dist` the camera's distance to the plane point. Both scale together with zoom, so the grid looks
 // the same at 0.5 m and at 5000 m; `fade: 0` turns the horizon fade off.
 //
-// Y axis. The line x=z=0 is not on the plane, so the fragment finds the ray's closest approach to it,
-// draws it at the plane axes' screen width from the derivative of its signed lateral distance, and
-// takes the nearer of plane and axis depth. It is the one element that draws when the ray misses the
-// plane.
+// Y axis. The line x=z=0 is not on the plane, so the fragment finds the ray's closest approach to it and
+// draws it 1 px wide, the grid lines' width, from the derivative of its signed lateral distance. It is
+// the one element that draws when the ray misses the plane. Below the ground it draws at half its alpha.
 //
-// Depth is reverse-Z (near 1, far 0): the pass tests `greater-equal` with depth writes off and writes
-// the winning element's depth through `frag_depth`. A grid has no edge of range: a plane or axis point
-// beyond the camera's far plane still draws, its depth clamped to the far plane's 0, so the horizon fade
-// alone ends the grid. Only a point behind the camera or nearer than the near plane is rejected.
+// Compositing. Plane lines and axes are one transparent overlay: the Y axis always composites over the
+// plane by transparency, whatever their relative depth, so a line crossing the axis below the ground
+// never cuts it. Colour and alpha are the only distinction between an axis and a line.
+//
+// Occlusion. Depth is reverse-Z (near 1, far 0). The pass samples the camera's scene depth (sear's
+// prepass depth, `view.depth`) and compares each element's own depth with it: an element behind scene
+// geometry draws at `alpha × xray`, so `xray: 0` hides the grid behind objects and `xray: 1` draws it
+// through them. The pass has no depth attachment, since it samples that depth, so it neither tests nor
+// writes depth. A grid has no edge of range: a plane or axis point beyond the camera's far plane still
+// draws, its depth clamped to the far plane's 0, so the horizon fade alone ends the grid. Only a point
+// behind the camera or nearer than the near plane is rejected.
 
 /** f32 lane offsets of the `Grid` uniform, as the WGSL struct below lays it out. */
 export const GRID_AT = {
@@ -42,6 +48,7 @@ export const GRID_AT = {
     axisZ: 48,
     params: 52,
     floor: 56,
+    xray: 57,
 } as const;
 
 /** byte size of the `Grid` uniform. */
@@ -60,12 +67,14 @@ struct Grid {
     axisZ: vec4<f32>,
     params: vec4<f32>,
     floor: f32,
+    xray: f32,
 }
 
 @group(0) @binding(0) var<uniform> grid: Grid;
+@group(0) @binding(1) var sceneDepth: texture_depth_2d;
 
 const LINE_PX: f32 = 1.0;
-const AXIS_PX: f32 = 2.0;
+const AXIS_PX: f32 = 1.0;
 const INV_LN10: f32 = 0.4342944819;
 
 struct VSOut {
@@ -92,11 +101,6 @@ fn vs(@builtin(vertex_index) vi: u32) -> VSOut {
     out.nearPoint = unproject(vec3(p, 1.0));
     out.farPoint = unproject(vec3(p, 0.0));
     return out;
-}
-
-struct FragOut {
-    @builtin(frag_depth) depth: f32,
-    @location(0) color: vec4<f32>,
 }
 
 // Ben Golus's pristine grid for thin lines along one direction: u in cells, deriv the cell footprint of one
@@ -143,8 +147,10 @@ fn over(front: vec4<f32>, back: vec4<f32>) -> vec4<f32> {
 }
 
 @fragment
-fn fs(input: VSOut) -> FragOut {
+fn fs(input: VSOut) -> @location(0) vec4<f32> {
     let opacity = grid.params.x;
+    let xray = saturate(grid.xray);
+    let scene = textureLoad(sceneDepth, vec2<i32>(input.position.xy), 0);
     let fade = grid.params.y;
     let cells = max(grid.params.z, 1e-3);
     let minCell = max(grid.floor, 0.0);
@@ -194,39 +200,24 @@ fn fs(input: VSOut) -> FragOut {
             let dist = length(p - grid.camPos.xyz);
             alpha = alpha * (1.0 - smoothstep(0.0, fade * h, dist));
         }
-        plane = vec4(color, alpha);
-    } else {
-        planeDepth = -1.0;
+        // behind scene geometry the plane draws at alpha × xray
+        plane = vec4(color, alpha * select(xray, 1.0, planeDepth >= scene));
     }
 
     var axis = vec4(0.0);
-    var axisDepth = -1.0;
     if (flatLen2 > 1e-12) {
-        axisDepth = depthOf(vec3(0.0, q.y, 0.0));
+        let axisDepth = depthOf(vec3(0.0, q.y, 0.0));
         if (axisDepth >= 0.0 && axisDepth <= 1.0) {
-            axis = vec4(grid.axisY.rgb, axisCoverage(lateralPx) * grid.axisY.a);
-        } else {
-            axisDepth = -1.0;
+            let below = select(1.0, 0.5, q.y < 0.0);
+            let occluded = select(xray, 1.0, axisDepth >= scene);
+            axis = vec4(grid.axisY.rgb, axisCoverage(lateralPx) * grid.axisY.a * below * occluded);
         }
     }
 
-    var color: vec4<f32>;
-    var depth: f32;
-    if (axis.a > 0.0 && axisDepth >= planeDepth) {
-        color = over(axis, plane);
-        depth = axisDepth;
-    } else if (plane.a > 0.0) {
-        color = over(plane, axis);
-        depth = planeDepth;
-    } else {
-        discard;
-    }
+    // one transparent overlay: the axis over the lines, whichever is nearer
+    var color = over(axis, plane);
     color.a = color.a * opacity;
     if (color.a < 1.0 / 255.0) { discard; }
-
-    var out: FragOut;
-    out.depth = depth;
-    out.color = color;
-    return out;
+    return color;
 }
 `;

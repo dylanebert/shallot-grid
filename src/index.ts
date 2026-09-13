@@ -21,7 +21,7 @@ import {
     type View,
     Views,
 } from "@dylanebert/shallot/render";
-import { ColorSystem, DEPTH_FORMAT, Depth, SearPlugin } from "@dylanebert/shallot/sear";
+import { ColorSystem, Depth, SearPlugin } from "@dylanebert/shallot/sear";
 import { GRID_AT, GRID_BYTES, GRID_FLOATS, GRID_SHADER } from "./shader";
 
 /**
@@ -50,6 +50,8 @@ export const Grid = {
     cells: sparse(f32),
     /** smallest cell in metres: no finer decade draws, and below it this level grows on screen */
     floor: sparse(f32),
+    /** how much of the grid draws through scene geometry [0,1]: 0 hides it behind objects, 1 draws it over them */
+    xray: sparse(f32),
 };
 
 /** the look a `Grid` singleton carries, one number per field. */
@@ -64,6 +66,7 @@ export const GRID_DEFAULTS: GridStyle = {
     fade: 20,
     cells: 40,
     floor: 1,
+    xray: 0,
 };
 
 function packColorAt(rgba: number, out: Float32Array, at: number): void {
@@ -85,6 +88,7 @@ export function packGrid(style: GridStyle, out: Float32Array): void {
     out[GRID_AT.params + 2] = style.cells;
     out[GRID_AT.params + 3] = 0;
     out[GRID_AT.floor] = style.floor;
+    out[GRID_AT.xray] = Math.min(1, Math.max(0, style.xray));
 }
 
 function readGrid(eid: number): GridStyle {
@@ -97,6 +101,7 @@ function readGrid(eid: number): GridStyle {
         fade: Grid.fade.get(eid),
         cells: Grid.cells.get(eid),
         floor: Grid.floor.get(eid),
+        xray: Grid.xray.get(eid),
     };
 }
 
@@ -108,8 +113,26 @@ const ALPHA_BLEND: GPUBlendState = {
 const gpu = {
     pipeline: null as GPURenderPipeline | null,
     uniform: null as GPUBuffer | null,
-    bindGroup: null as GPUBindGroup | null,
+    layout: null as GPUBindGroupLayout | null,
+    // per camera: the bind group over its scene depth, rebuilt when sear reallocates that depth
+    groups: new Map<number, { depth: GPUTextureView; group: GPUBindGroup }>(),
 };
+
+function bindGroupFor(camera: number, depth: GPUTextureView): GPUBindGroup | null {
+    if (!gpu.layout || !gpu.uniform) return null;
+    const cached = gpu.groups.get(camera);
+    if (cached?.depth === depth) return cached.group;
+    const group = Compute.device.createBindGroup({
+        label: "grid",
+        layout: gpu.layout,
+        entries: [
+            { binding: 0, resource: { buffer: gpu.uniform } },
+            { binding: 1, resource: depth },
+        ],
+    });
+    gpu.groups.set(camera, { depth, group });
+    return group;
+}
 
 const _data = new Float32Array(GRID_FLOATS);
 const _viewProj = new Float32Array(16);
@@ -118,8 +141,10 @@ const _invViewProj = new Float32Array(16);
 function drawGrid(camera: number, view: View): void {
     const device = Compute.device;
     const encoder = Render.encoder;
-    if (!device || !encoder || !gpu.pipeline || !gpu.uniform || !gpu.bindGroup) return;
+    if (!device || !encoder || !gpu.pipeline || !gpu.uniform) return;
     if (!view.framebuffer || !view.depth || view.width === 0 || view.height === 0) return;
+    const bindGroup = bindGroupFor(camera, view.depth);
+    if (!bindGroup) return;
 
     computeViewProj(camera, view.width / view.height, _viewProj);
     invert(_viewProj, _invViewProj);
@@ -134,17 +159,16 @@ function drawGrid(camera: number, view: View): void {
     const pass = encoder.beginRenderPass({
         label: "grid",
         colorAttachments: [{ view: view.framebuffer, loadOp: "load", storeOp: "store" }],
-        depthStencilAttachment: { view: view.depth, depthLoadOp: "load", depthStoreOp: "store" },
         timestampWrites: Compute.span?.("grid"),
     });
     pass.setPipeline(gpu.pipeline);
-    pass.setBindGroup(0, gpu.bindGroup);
+    pass.setBindGroup(0, bindGroup);
     pass.draw(6);
     pass.end();
 }
 
 // draws the grid into every camera's view after sear's color pass and before glaze composites it, marking
-// each camera `Depth` so sear stores the depth the pass tests against. No-op unless the scene has a Grid
+// each camera `Depth` so sear stores the scene depth the pass samples. No-op unless the scene has a Grid
 // singleton.
 const GridSystem: System = {
     name: "grid",
@@ -156,7 +180,7 @@ const GridSystem: System = {
         if (eid < 0) return;
         packGrid(readGrid(eid), _data);
         for (const camera of state.query([Camera])) {
-            // the pass depth-tests against the scene, which sear publishes only for a `Depth` camera
+            // the pass samples the scene depth, which sear publishes only for a `Depth` camera
             if (!state.has(camera, Depth)) state.add(camera, Depth);
             const view = Views.get(camera);
             if (view) drawGrid(camera, view);
@@ -198,6 +222,11 @@ export const GridPlugin: Plugin = {
                     visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                     buffer: { type: "uniform" },
                 },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: { sampleType: "depth" },
+                },
             ],
         });
         gpu.uniform?.destroy();
@@ -206,11 +235,8 @@ export const GridPlugin: Plugin = {
             size: GRID_BYTES,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
-        gpu.bindGroup = device.createBindGroup({
-            label: "grid",
-            layout,
-            entries: [{ binding: 0, resource: { buffer: gpu.uniform } }],
-        });
+        gpu.layout = layout;
+        gpu.groups.clear();
         gpu.pipeline = await device.createRenderPipelineAsync({
             label: "grid",
             layout: device.createPipelineLayout({ bindGroupLayouts: [layout] }),
@@ -220,11 +246,6 @@ export const GridPlugin: Plugin = {
                 entryPoint: "fs",
                 targets: [{ format: Render.format, blend: ALPHA_BLEND }],
             },
-            depthStencil: {
-                format: DEPTH_FORMAT,
-                depthCompare: "greater-equal",
-                depthWriteEnabled: false,
-            },
             primitive: { topology: "triangle-list" },
         });
     },
@@ -232,7 +253,8 @@ export const GridPlugin: Plugin = {
     dispose() {
         gpu.uniform?.destroy();
         gpu.uniform = null;
-        gpu.bindGroup = null;
+        gpu.layout = null;
+        gpu.groups.clear();
         gpu.pipeline = null;
     },
 };

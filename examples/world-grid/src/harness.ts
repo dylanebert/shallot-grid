@@ -1,4 +1,5 @@
-import { Camera, type Plugin, type State, Transform } from "@dylanebert/shallot";
+import { Camera, invert, Part, type Plugin, type State, Transform } from "@dylanebert/shallot";
+import { computeViewProj } from "@dylanebert/shallot/render";
 import { Orbit } from "@dylanebert/shallot/extras";
 import { Grid } from "@dylanebert/shallot-grid";
 import { type Check, installHarness, type PixelProbe, pixelProbePass, probePixels } from "@dylanebert/shallot/harness";
@@ -98,9 +99,11 @@ export function gridProbes(width: number, height: number): Record<string, PixelP
             name: "axisY",
             minPixels: 40,
             minSpan: Math.floor(height / 4),
-            r: [56, 128],
-            g: [112, 192],
-            b: [40, 96],
+            // the 1 px axis at the viewport's center column splits its coverage across two pixels, reading
+            // about (56,104,48); green over 88 excludes neutral (80,73,69) and blue under 88 excludes Z
+            r: [32, 100],
+            g: [88, 192],
+            b: [24, 88],
         },
     };
 }
@@ -207,6 +210,153 @@ async function lookFrames(state: State, camera: number, canvas: HTMLCanvasElemen
     return checks;
 }
 
+// a band match for any of the named probes at pixel i
+function inAny(image: ImageData, i: number, bands: PixelProbe[]): boolean {
+    return bands.some((band) => neutral(image, i, band));
+}
+
+// the Y axis's green hue at any alpha over the dark clear: green leads red and blue
+function greenish(image: ImageData, i: number): boolean {
+    const r = image.data[i] ?? 0;
+    const g = image.data[i + 1] ?? 0;
+    const b = image.data[i + 2] ?? 0;
+    return g >= 48 && g >= r + 16 && g >= b + 16;
+}
+
+/**
+ * the pixels whose camera ray hits the box shrunk to 80% about its center, so an edge pixel never counts:
+ * a CPU ray-box slab test through the camera's inverse view-projection at the capture's aspect.
+ */
+function boxMask(camera: number, box: number, image: ImageData): Uint8Array {
+    const viewProj = new Float32Array(16);
+    const inv = new Float32Array(16);
+    computeViewProj(camera, image.width / image.height, viewProj);
+    invert(viewProj, inv);
+    const lo = [0, 0, 0];
+    const hi = [0, 0, 0];
+    const lanes = ["x", "y", "z"] as const;
+    lanes.forEach((axis, k) => {
+        const c = Transform.pos[axis].get(box);
+        const h = Transform.scale[axis].get(box) * 0.5 * 0.8;
+        lo[k] = c - h;
+        hi[k] = c + h;
+    });
+    const unproject = (x: number, y: number, z: number) => {
+        const w = inv[3] * x + inv[7] * y + inv[11] * z + inv[15];
+        return [0, 1, 2].map((r) => (inv[r] * x + inv[4 + r] * y + inv[8 + r] * z + inv[12 + r]) / w);
+    };
+    const mask = new Uint8Array(image.width * image.height);
+    for (let py = 0; py < image.height; py++) {
+        const ny = 1 - (2 * (py + 0.5)) / image.height;
+        for (let px = 0; px < image.width; px++) {
+            const nx = (2 * (px + 0.5)) / image.width - 1;
+            const o = unproject(nx, ny, 1);
+            const f = unproject(nx, ny, 0);
+            let t0 = 0;
+            let t1 = 1;
+            for (let k = 0; k < 3 && t0 <= t1; k++) {
+                const d = (f[k] ?? 0) - (o[k] ?? 0);
+                const ok = o[k] ?? 0;
+                if (Math.abs(d) < 1e-12) {
+                    if (ok < (lo[k] ?? 0) || ok > (hi[k] ?? 0)) t0 = 2;
+                    continue;
+                }
+                const a = ((lo[k] ?? 0) - ok) / d;
+                const b = ((hi[k] ?? 0) - ok) / d;
+                t0 = Math.max(t0, Math.min(a, b));
+                t1 = Math.min(t1, Math.max(a, b));
+            }
+            if (t0 <= t1) mask[py * image.width + px] = 1;
+        }
+    }
+    return mask;
+}
+
+// the S7 frames: the Y axis unbroken where lines cross it below the ground, and the box hiding the grid
+// unless xray draws it through
+async function occlusionFrames(state: State, camera: number, canvas: HTMLCanvasElement): Promise<Check[]> {
+    const checks: Check[] = [];
+    const gridEid = state.only([Grid]);
+
+    {
+        const y = await pose(camera, 5, PITCH);
+        const image = await capture(canvas);
+        const probes = gridProbes(image.width, image.height);
+        const cx = Math.floor(image.width / 2);
+        const cy = Math.floor(image.height / 2);
+        // below the origin the column is the Y axis under the ground; the X and Z axes leave it by 12 rows
+        let gaps = 0;
+        let crossings = 0;
+        const gapRows: number[] = [];
+        for (let row = cy + 12; row < image.height; row++) {
+            let green = false;
+            let line = false;
+            for (let x = cx - 6; x <= cx + 6; x++) {
+                const i = (row * image.width + x) * 4;
+                if (greenish(image, i)) green = true;
+                if (neutral(image, i, probes.neutral)) line = true;
+            }
+            if (!green) {
+                gaps++;
+                if (gapRows.length < 12) gapRows.push(row);
+            }
+            if (line) crossings++;
+        }
+        checks.push({
+            name: "Y axis unbroken below the ground",
+            ok: gaps === 0 && crossings > 0,
+            detail: `camera y ${y.toFixed(3)}, rows ${cy + 12}..${image.height - 1} on columns ${cx}±6: ${gaps} rows without the axis (first ${gapRows.join(",")}), ${crossings} rows with a line`,
+            data: { gaps, crossings, height: y },
+        });
+    }
+
+    const box = [...state.query([Part])].find((eid) => state.has(eid, Transform));
+    const xray = Grid.xray.get(gridEid);
+    for (const value of [0, 1]) {
+        Grid.xray.set(gridEid, value);
+        const y = await pose(camera, 4, PITCH);
+        const image = await capture(canvas);
+        const probes = gridProbes(image.width, image.height);
+        const mask = box === undefined ? new Uint8Array(0) : boxMask(camera, box, image);
+        const inside = mask.reduce((n, m) => n + m, 0);
+        const masked = new Uint8ClampedArray(image.data.length);
+        let hits = 0;
+        for (let p = 0; p < mask.length; p++) {
+            if (!mask[p]) continue;
+            const i = p * 4;
+            if (value === 0 && inAny(image, i, Object.values(probes))) hits++;
+            masked.set(image.data.subarray(i, i + 4), i);
+        }
+        const boxImage = new ImageData(masked, image.width, image.height);
+        if (value === 0) {
+            checks.push({
+                name: "box hides the grid at xray 0",
+                ok: inside > 500 && hits === 0,
+                detail: `camera y ${y.toFixed(3)}, ${hits} grid-colored px of ${inside} box px; box ${histogram(boxImage)}`,
+                data: { hits, inside, height: y },
+            });
+        } else {
+            let x0 = image.width;
+            let x1 = -1;
+            for (let p = 0; p < mask.length; p++) {
+                if (!mask[p]) continue;
+                x0 = Math.min(x0, p % image.width);
+                x1 = Math.max(x1, p % image.width);
+            }
+            const result = probePixels(masked, image.width, image.height, probes.neutral);
+            const probe = { ...probes.neutral, minPixels: 20, minSpan: Math.max(1, Math.floor((x1 - x0) / 3)) };
+            checks.push({
+                name: "grid lines cross the box at xray 1",
+                ok: inside > 500 && pixelProbePass(result, probe),
+                detail: `camera y ${y.toFixed(3)}, ${result.pixels} neutral px over ${result.width}x${result.height} within ${inside} box px spanning ${x1 - x0 + 1} columns; box ${histogram(boxImage)}`,
+                data: { ...result, inside, height: y },
+            });
+        }
+    }
+    Grid.xray.set(gridEid, xray);
+    return checks;
+}
+
 const WorldGridHarness: Plugin = {
     name: "WorldGridHarness",
     warm(state: State) {
@@ -236,6 +386,7 @@ const WorldGridHarness: Plugin = {
                 }
             }
             checks.push(...(await lookFrames(state, camera, canvas)));
+            checks.push(...(await occlusionFrames(state, camera, canvas)));
             await pose(camera, HEIGHTS[0] ?? 0.5);
             return { ok: checks.every((c) => c.ok), checks };
         };
