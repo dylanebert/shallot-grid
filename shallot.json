@@ -2,6 +2,6 @@
     "$schema": "https://raw.githubusercontent.com/dylanebert/shallot/main/shallot.schema.json",
     "plugins": { "grid": "./src/index.ts" },
     "check": [
-        { "file": "src/index.test.ts" }
+        { "file": "src/grid.test.ts" }
     ]
 }
