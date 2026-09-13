@@ -6,3 +6,6 @@ playwright-report/
 
 # regenerable via tests/gen-fixtures.ts
 tests/fixtures/
+
+# the frame-cost oracle's temporary project beside the example
+examples/world-grid/.frame-cost/
