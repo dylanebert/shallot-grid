@@ -1,8 +1,14 @@
 import { Camera, invert, Part, type Plugin, type State, Transform } from "@dylanebert/shallot";
-import { computeViewProj } from "@dylanebert/shallot/render";
 import { Orbit } from "@dylanebert/shallot/extras";
+import {
+    type Check,
+    installHarness,
+    type PixelProbe,
+    pixelProbePass,
+    probePixels,
+} from "@dylanebert/shallot/harness";
+import { computeViewProj } from "@dylanebert/shallot/render";
 import { Grid } from "@dylanebert/shallot-grid";
-import { type Check, installHarness, type PixelProbe, pixelProbePass, probePixels } from "@dylanebert/shallot/harness";
 
 // Verification hook for the chromium row in `src/world-grid.test.ts`, not part of the recipe: poses the
 // orbit camera at each height, captures the composited canvas, and classifies the frame's grid pixels.
@@ -54,7 +60,11 @@ async function pose(camera: number, height: number, pitch = PITCH): Promise<numb
 }
 
 // the column band of the image around screen x `cx`, as its own tightly packed RGBA buffer
-function column(image: ImageData, cx: number, half: number): { rgba: Uint8ClampedArray; width: number } {
+function column(
+    image: ImageData,
+    cx: number,
+    half: number,
+): { rgba: Uint8ClampedArray; width: number } {
     const x0 = Math.max(0, cx - half);
     const width = Math.min(image.width, cx + half + 1) - x0;
     const rgba = new Uint8ClampedArray(width * image.height * 4);
@@ -68,7 +78,10 @@ function column(image: ImageData, cx: number, half: number): { rgba: Uint8Clampe
 function histogram(image: ImageData): string {
     const counts = new Map<number, number>();
     for (let i = 0; i < image.data.length; i += 4) {
-        const key = ((image.data[i] >> 3) << 10) | ((image.data[i + 1] >> 3) << 5) | (image.data[i + 2] >> 3);
+        const key =
+            ((image.data[i] >> 3) << 10) |
+            ((image.data[i + 1] >> 3) << 5) |
+            (image.data[i + 2] >> 3);
         counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     return [...counts]
@@ -93,8 +106,22 @@ export function gridProbes(width: number, height: number): Record<string, PixelP
             g: [30, 88],
             b: [22, 80],
         },
-        axisX: { name: "axisX", minPixels: 100, minSpan: quarter, r: [120, 255], g: [0, 64], b: [0, 64] },
-        axisZ: { name: "axisZ", minPixels: 100, minSpan: quarter, r: [16, 96], g: [96, 176], b: [100, 176] },
+        axisX: {
+            name: "axisX",
+            minPixels: 100,
+            minSpan: quarter,
+            r: [120, 255],
+            g: [0, 64],
+            b: [0, 64],
+        },
+        axisZ: {
+            name: "axisZ",
+            minPixels: 100,
+            minSpan: quarter,
+            r: [16, 96],
+            g: [96, 176],
+            b: [100, 176],
+        },
         axisY: {
             name: "axisY",
             minPixels: 40,
@@ -112,11 +139,22 @@ function neutral(image: ImageData, i: number, band: PixelProbe): boolean {
     const r = image.data[i] ?? 0;
     const g = image.data[i + 1] ?? 0;
     const b = image.data[i + 2] ?? 0;
-    return r >= band.r[0] && r <= band.r[1] && g >= band.g[0] && g <= band.g[1] && b >= band.b[0] && b <= band.b[1];
+    return (
+        r >= band.r[0] &&
+        r <= band.r[1] &&
+        g >= band.g[0] &&
+        g <= band.g[1] &&
+        b >= band.b[0] &&
+        b <= band.b[1]
+    );
 }
 
 // the S6 look frames: no fused fill at a grazing near view, lines past the far plane, no decade under a metre
-async function lookFrames(state: State, camera: number, canvas: HTMLCanvasElement): Promise<Check[]> {
+async function lookFrames(
+    state: State,
+    camera: number,
+    canvas: HTMLCanvasElement,
+): Promise<Check[]> {
     const checks: Check[] = [];
     const gridEid = state.only([Grid]);
     const fade = Grid.fade.get(gridEid);
@@ -130,7 +168,8 @@ async function lookFrames(state: State, camera: number, canvas: HTMLCanvasElemen
         const top = Math.floor((image.height * 3) / 4);
         let hits = 0;
         for (let row = top; row < image.height; row++) {
-            for (let x = 0; x < image.width; x++) if (neutral(image, (row * image.width + x) * 4, band)) hits++;
+            for (let x = 0; x < image.width; x++)
+                if (neutral(image, (row * image.width + x) * 4, band)) hits++;
         }
         const fill = hits / ((image.height - top) * image.width);
         checks.push({
@@ -152,7 +191,12 @@ async function lookFrames(state: State, camera: number, canvas: HTMLCanvasElemen
         const ndc = (Math.sin(PITCH) - y / 1000) / (tanHalf * Math.cos(PITCH));
         const farRow = Math.floor(((1 - ndc) / 2) * image.height);
         const rows = Math.max(0, farRow - 2);
-        const result = probePixels(image.data.subarray(0, rows * image.width * 4), image.width, rows, band);
+        const result = probePixels(
+            image.data.subarray(0, rows * image.width * 4),
+            image.width,
+            rows,
+            band,
+        );
         // measured: the 0.1.0 depth reject leaves 0 px above the far row, the clamp 176 px over 326 columns in
         // the band of about 35 rows between the far row and the horizon
         const probe = { ...band, minPixels: 50, minSpan: Math.floor(image.width / 8) };
@@ -189,7 +233,11 @@ async function lookFrames(state: State, camera: number, canvas: HTMLCanvasElemen
         let start = -1;
         for (let row = image.height - 1; row >= -1; row--) {
             const s = row >= 0 ? along(row) : Number.POSITIVE_INFINITY;
-            const on = row >= 0 && s > 0.05 && s < FLOOR_REACH && neutral(image, (row * image.width + x) * 4, band);
+            const on =
+                row >= 0 &&
+                s > 0.05 &&
+                s < FLOOR_REACH &&
+                neutral(image, (row * image.width + x) * 4, band);
             if (on && start < 0) start = row;
             if (!on && start >= 0) {
                 runs.push(along((start + row + 1) / 2));
@@ -197,7 +245,8 @@ async function lookFrames(state: State, camera: number, canvas: HTMLCanvasElemen
             }
         }
         let spacing = Number.POSITIVE_INFINITY;
-        for (let i = 1; i < runs.length; i++) spacing = Math.min(spacing, (runs[i] ?? 0) - (runs[i - 1] ?? 0));
+        for (let i = 1; i < runs.length; i++)
+            spacing = Math.min(spacing, (runs[i] ?? 0) - (runs[i - 1] ?? 0));
         checks.push({
             name: "no decade finer than 1 m at 0.2 m",
             ok: runs.length >= 2 && spacing >= Math.SQRT2 * 0.8,
@@ -243,7 +292,9 @@ function boxMask(camera: number, box: number, image: ImageData): Uint8Array {
     });
     const unproject = (x: number, y: number, z: number) => {
         const w = inv[3] * x + inv[7] * y + inv[11] * z + inv[15];
-        return [0, 1, 2].map((r) => (inv[r] * x + inv[4 + r] * y + inv[8 + r] * z + inv[12 + r]) / w);
+        return [0, 1, 2].map(
+            (r) => (inv[r] * x + inv[4 + r] * y + inv[8 + r] * z + inv[12 + r]) / w,
+        );
     };
     const mask = new Uint8Array(image.width * image.height);
     for (let py = 0; py < image.height; py++) {
@@ -274,7 +325,11 @@ function boxMask(camera: number, box: number, image: ImageData): Uint8Array {
 
 // the S7 frames: the Y axis unbroken where lines cross it below the ground, and the box hiding the grid
 // unless xray draws it through
-async function occlusionFrames(state: State, camera: number, canvas: HTMLCanvasElement): Promise<Check[]> {
+async function occlusionFrames(
+    state: State,
+    camera: number,
+    canvas: HTMLCanvasElement,
+): Promise<Check[]> {
     const checks: Check[] = [];
     const gridEid = state.only([Grid]);
 
@@ -344,7 +399,11 @@ async function occlusionFrames(state: State, camera: number, canvas: HTMLCanvasE
                 x1 = Math.max(x1, p % image.width);
             }
             const result = probePixels(masked, image.width, image.height, probes.neutral);
-            const probe = { ...probes.neutral, minPixels: 20, minSpan: Math.max(1, Math.floor((x1 - x0) / 3)) };
+            const probe = {
+                ...probes.neutral,
+                minPixels: 20,
+                minSpan: Math.max(1, Math.floor((x1 - x0) / 3)),
+            };
             checks.push({
                 name: "grid lines cross the box at xray 1",
                 ok: inside > 500 && pixelProbePass(result, probe),
@@ -364,7 +423,8 @@ const WorldGridHarness: Plugin = {
         harness.run = async () => {
             const camera = state.only([Orbit]);
             const canvas = document.querySelector("canvas");
-            if (camera < 0 || !canvas) return { ok: false, checks: [{ name: "camera and canvas", ok: false }] };
+            if (camera < 0 || !canvas)
+                return { ok: false, checks: [{ name: "camera and canvas", ok: false }] };
             const checks: Check[] = [];
             for (const height of HEIGHTS) {
                 const y = await pose(camera, height);
