@@ -7,6 +7,7 @@ import {
     pixelProbePass,
     probePixels,
 } from "@dylanebert/shallot/harness";
+import { type Capture, captureFrame } from "@dylanebert/shallot/harness/capture";
 import { computeViewProj } from "@dylanebert/shallot/render";
 import { Grid } from "@dylanebert/shallot-grid";
 
@@ -29,21 +30,6 @@ const NEAR_FILL = 0.05;
 
 const frame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
 
-// A WebGPU canvas holds its frame only until the task that rendered it ends, so the read happens inside a
-// frame callback queued after the engine's own.
-async function capture(canvas: HTMLCanvasElement): Promise<ImageData> {
-    const url = await new Promise<string>((done) =>
-        requestAnimationFrame(() => done(canvas.toDataURL("image/png"))),
-    );
-    const bitmap = await createImageBitmap(await (await fetch(url)).blob());
-    const surface = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const context = surface.getContext("2d");
-    if (!context) throw new Error("no 2d context for the capture");
-    context.drawImage(bitmap, 0, 0);
-    bitmap.close();
-    return context.getImageData(0, 0, surface.width, surface.height);
-}
-
 async function pose(camera: number, height: number, pitch = PITCH): Promise<number> {
     Orbit.pitch.set(camera, pitch);
     Orbit.distance.set(camera, height / Math.sin(pitch));
@@ -61,7 +47,7 @@ async function pose(camera: number, height: number, pitch = PITCH): Promise<numb
 
 // the column band of the image around screen x `cx`, as its own tightly packed RGBA buffer
 function column(
-    image: ImageData,
+    image: Capture,
     cx: number,
     half: number,
 ): { rgba: Uint8ClampedArray; width: number } {
@@ -70,18 +56,18 @@ function column(
     const rgba = new Uint8ClampedArray(width * image.height * 4);
     for (let y = 0; y < image.height; y++) {
         const from = (y * image.width + x0) * 4;
-        rgba.set(image.data.subarray(from, from + width * 4), y * width * 4);
+        rgba.set(image.rgba.subarray(from, from + width * 4), y * width * 4);
     }
     return { rgba, width };
 }
 
-function histogram(image: ImageData): string {
+function histogram(image: Capture): string {
     const counts = new Map<number, number>();
-    for (let i = 0; i < image.data.length; i += 4) {
+    for (let i = 0; i < image.rgba.length; i += 4) {
         const key =
-            ((image.data[i] >> 3) << 10) |
-            ((image.data[i + 1] >> 3) << 5) |
-            (image.data[i + 2] >> 3);
+            ((image.rgba[i] >> 3) << 10) |
+            ((image.rgba[i + 1] >> 3) << 5) |
+            (image.rgba[i + 2] >> 3);
         counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     return [...counts]
@@ -135,10 +121,10 @@ export function gridProbes(width: number, height: number): Record<string, PixelP
     };
 }
 
-function neutral(image: ImageData, i: number, band: PixelProbe): boolean {
-    const r = image.data[i] ?? 0;
-    const g = image.data[i + 1] ?? 0;
-    const b = image.data[i + 2] ?? 0;
+function neutral(image: Capture, i: number, band: PixelProbe): boolean {
+    const r = image.rgba[i] ?? 0;
+    const g = image.rgba[i + 1] ?? 0;
+    const b = image.rgba[i + 2] ?? 0;
     return (
         r >= band.r[0] &&
         r <= band.r[1] &&
@@ -163,7 +149,7 @@ async function lookFrames(
 
     {
         const y = await pose(camera, 0.5, GRAZE);
-        const image = await capture(canvas);
+        const image = await captureFrame(canvas);
         const band = gridProbes(image.width, image.height).neutral;
         const top = Math.floor((image.height * 3) / 4);
         let hits = 0;
@@ -185,14 +171,14 @@ async function lookFrames(
         Camera.far.set(camera, 1000);
         Grid.fade.set(gridEid, 100);
         const y = await pose(camera, 50, PITCH);
-        const image = await capture(canvas);
+        const image = await captureFrame(canvas);
         const band = gridProbes(image.width, image.height).neutral;
         // a ray at ndc y meets the plane at view depth y / (sin p - ndc tan(fov/2) cos p); the far row is depth 1000
         const ndc = (Math.sin(PITCH) - y / 1000) / (tanHalf * Math.cos(PITCH));
         const farRow = Math.floor(((1 - ndc) / 2) * image.height);
         const rows = Math.max(0, farRow - 2);
         const result = probePixels(
-            image.data.subarray(0, rows * image.width * 4),
+            image.rgba.subarray(0, rows * image.width * 4),
             image.width,
             rows,
             band,
@@ -216,7 +202,7 @@ async function lookFrames(
         Grid.fade.set(gridEid, 0);
         Grid.axisY.set(gridEid, axisY & ~0xff);
         const y = await pose(camera, 0.2, PITCH);
-        const image = await capture(canvas);
+        const image = await captureFrame(canvas);
         Grid.axisY.set(gridEid, axisY);
         const band = gridProbes(image.width, image.height).neutral;
         const x = Math.floor(image.width / 2);
@@ -260,15 +246,15 @@ async function lookFrames(
 }
 
 // a band match for any of the named probes at pixel i
-function inAny(image: ImageData, i: number, bands: PixelProbe[]): boolean {
+function inAny(image: Capture, i: number, bands: PixelProbe[]): boolean {
     return bands.some((band) => neutral(image, i, band));
 }
 
 // the Y axis's green hue at any alpha over the dark clear: green leads red and blue
-function greenish(image: ImageData, i: number): boolean {
-    const r = image.data[i] ?? 0;
-    const g = image.data[i + 1] ?? 0;
-    const b = image.data[i + 2] ?? 0;
+function greenish(image: Capture, i: number): boolean {
+    const r = image.rgba[i] ?? 0;
+    const g = image.rgba[i + 1] ?? 0;
+    const b = image.rgba[i + 2] ?? 0;
     return g >= 48 && g >= r + 16 && g >= b + 16;
 }
 
@@ -276,7 +262,7 @@ function greenish(image: ImageData, i: number): boolean {
  * the pixels whose camera ray hits the box shrunk to 80% about its center, so an edge pixel never counts:
  * a CPU ray-box slab test through the camera's inverse view-projection at the capture's aspect.
  */
-function boxMask(camera: number, box: number, image: ImageData): Uint8Array {
+function boxMask(camera: number, box: number, image: Capture): Uint8Array {
     const viewProj = new Float32Array(16);
     const inv = new Float32Array(16);
     computeViewProj(camera, image.width / image.height, viewProj);
@@ -335,7 +321,7 @@ async function occlusionFrames(
 
     {
         const y = await pose(camera, 5, PITCH);
-        const image = await capture(canvas);
+        const image = await captureFrame(canvas);
         const probes = gridProbes(image.width, image.height);
         const cx = Math.floor(image.width / 2);
         const cy = Math.floor(image.height / 2);
@@ -370,19 +356,19 @@ async function occlusionFrames(
     for (const value of [0, 1]) {
         Grid.xray.set(gridEid, value);
         const y = await pose(camera, 4, PITCH);
-        const image = await capture(canvas);
+        const image = await captureFrame(canvas);
         const probes = gridProbes(image.width, image.height);
         const mask = box === undefined ? new Uint8Array(0) : boxMask(camera, box, image);
         const inside = mask.reduce((n, m) => n + m, 0);
-        const masked = new Uint8ClampedArray(image.data.length);
+        const masked = new Uint8ClampedArray(image.rgba.length);
         let hits = 0;
         for (let p = 0; p < mask.length; p++) {
             if (!mask[p]) continue;
             const i = p * 4;
             if (value === 0 && inAny(image, i, Object.values(probes))) hits++;
-            masked.set(image.data.subarray(i, i + 4), i);
+            masked.set(image.rgba.subarray(i, i + 4), i);
         }
-        const boxImage = new ImageData(masked, image.width, image.height);
+        const boxImage: Capture = { ...image, rgba: masked };
         if (value === 0) {
             checks.push({
                 name: "box hides the grid at xray 0",
@@ -428,7 +414,7 @@ const WorldGridHarness: Plugin = {
             const checks: Check[] = [];
             for (const height of HEIGHTS) {
                 const y = await pose(camera, height);
-                const image = await capture(canvas);
+                const image = await captureFrame(canvas);
                 const probes = gridProbes(image.width, image.height);
                 // the orbit target is the origin, so it projects to the viewport center
                 const strip = column(image, Math.floor(image.width / 2), 6);
@@ -436,7 +422,7 @@ const WorldGridHarness: Plugin = {
                     const result =
                         name === "axisY"
                             ? probePixels(strip.rgba, strip.width, image.height, probe)
-                            : probePixels(image.data, image.width, image.height, probe);
+                            : probePixels(image.rgba, image.width, image.height, probe);
                     checks.push({
                         name: `${name} at ${height} m`,
                         ok: pixelProbePass(result, probe),
