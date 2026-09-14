@@ -2,8 +2,5 @@
     "name": "world-grid",
     "version": "0.0.0",
     "private": true,
-    "type": "module",
-    "dependencies": {
-        "@dylanebert/shallot-grid": "^0.1.2"
-    }
+    "type": "module"
 }

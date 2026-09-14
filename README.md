@@ -54,9 +54,9 @@ bun run check               # tsc + Biome + carrier declaration/drift checks
 bun run test                # installed carrier unit sweep (src/)
 ```
 
-### Linking to a local engine
+### Package-state contract
 
-To iterate against an unreleased engine, keep the published range in `package.json` and link at the consumer. Run `bun link` here once, then `bun link @dylanebert/shallot-grid` in the consumer and set `resolve.dedupe: ["@dylanebert/shallot", "typegpu"]` in its Vite config. The linked plugin runs on the consumer's engine and typegpu instead of its own copies. To return to the registry, run `bun install --force` in the consumer; a plain `bun install` keeps the link.
+This repository's local, exact-source, and published package states live in [`AGENTS.md`](./AGENTS.md). The current committed development identity is the full Shallot Git SHA recorded there and in `package.json`/`bun.lock`. Local iteration uses the documented no-save link and forced frozen restoration; it does not change the committed identity. When a consumer uses the plugin, its Vite configuration must dedupe `@dylanebert/shallot` and `typegpu`.
 
 ## Releasing
 
