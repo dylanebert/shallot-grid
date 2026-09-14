@@ -12,24 +12,20 @@ check(
         claim: "the grid vanishes at some camera height or drops an axis line",
         size: "integration",
         requires: ["chromium"],
+        host: "mac",
         subject: "src",
     },
     async () => {
-        const verdict = await runBrowserCheck(
-            (port) => [
-                process.execPath,
-                SHALLOT,
-                "dev",
-                EXAMPLE,
-                "--port",
-                String(port),
-                "--strict-port",
-                "--no-open",
-            ],
-            // headless Chromium on a Linux Wayland host reaches only the SwiftShader fallback adapter, which
-            // loses its device before the first frame; the headed launch reaches the host GPU
-            { headless: false },
-        );
+        const verdict = await runBrowserCheck((port) => [
+            process.execPath,
+            SHALLOT,
+            "dev",
+            EXAMPLE,
+            "--port",
+            String(port),
+            "--strict-port",
+            "--no-open",
+        ]);
         const failed = (verdict.checks ?? []).filter((c) => !c.ok);
         if (!verdict.ok || (verdict.checks ?? []).length !== 18) {
             throw new Error(

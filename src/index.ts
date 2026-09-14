@@ -21,7 +21,7 @@ import {
     type View,
     Views,
 } from "@dylanebert/shallot/render";
-import { ColorSystem, Depth, SearPlugin } from "@dylanebert/shallot/sear";
+import { ColorSystem, SearPlugin } from "@dylanebert/shallot/sear";
 import { GRID_AT, GRID_BYTES, GRID_FLOATS, GRID_SHADER } from "./shader";
 
 /**
@@ -167,8 +167,8 @@ function drawGrid(camera: number, view: View): void {
     pass.end();
 }
 
-// draws the grid into every camera's view after sear's color pass and before glaze composites it, marking
-// each camera `Depth` so sear stores the scene depth the pass samples. No-op unless the scene has a Grid
+// draws the grid into every camera's view after sear's color pass and before glaze composites it, reading
+// the scene depth requested by each camera's declared `Depth` marker. No-op unless the scene has a Grid
 // singleton.
 const GridSystem: System = {
     name: "grid",
@@ -180,8 +180,6 @@ const GridSystem: System = {
         if (eid < 0) return;
         packGrid(readGrid(eid), _data);
         for (const camera of state.query([Camera])) {
-            // the pass samples the scene depth, which sear publishes only for a `Depth` camera
-            if (!state.has(camera, Depth)) state.add(camera, Depth);
             const view = Views.get(camera);
             if (view) drawGrid(camera, view);
         }
