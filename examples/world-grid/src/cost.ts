@@ -19,7 +19,8 @@ const FrameCostHarness: Plugin = {
         harness.run = async () => {
             const camera = state.only([Orbit]);
             const canvas = document.querySelector("canvas");
-            if (camera < 0 || !canvas) return { ok: false, checks: [{ name: "camera and canvas", ok: false }] };
+            if (camera < 0 || !canvas)
+                return { ok: false, checks: [{ name: "camera and canvas", ok: false }] };
             Orbit.distance.set(camera, HEIGHT / Math.sin(Orbit.pitch.get(camera)));
             for (let i = 0; i < WARM_FRAMES; i++) await frame();
             const time0 = Profile.gpuTime.get("grid") ?? 0;
@@ -30,7 +31,8 @@ const FrameCostHarness: Plugin = {
                 peak = Math.max(peak, Profile.gpu.get("grid") ?? 0);
             }
             const fires = (Profile.gpuFires.get("grid") ?? 0) - fires0;
-            const meanMs = fires > 0 ? ((Profile.gpuTime.get("grid") ?? 0) - time0) / fires : Number.NaN;
+            const meanMs =
+                fires > 0 ? ((Profile.gpuTime.get("grid") ?? 0) - time0) / fires : Number.NaN;
             return {
                 ok: fires > 0,
                 checks: [

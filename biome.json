@@ -1,7 +1,7 @@
 {
     "$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
     "files": {
-        "includes": ["src/**/*.ts", "tests/**/*.ts", "!tests/fixtures"]
+        "includes": ["src/**/*.ts", "tests/**/*.ts", "examples/**/*.ts", "!tests/fixtures"]
     },
     "linter": {
         "enabled": true,
