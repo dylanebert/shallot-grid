@@ -9,7 +9,7 @@ import {
 } from "@dylanebert/shallot/harness";
 import { type Capture, captureFrame } from "@dylanebert/shallot/harness/capture";
 import { computeViewProj } from "@dylanebert/shallot/render";
-import { Grid } from "@dylanebert/shallot-grid";
+import { Grid } from "../../../src/index";
 
 // Verification hook for the chromium row in `src/world-grid.test.ts`, not part of the recipe: poses the
 // orbit camera at each height, captures the composited canvas, and classifies the frame's grid pixels.

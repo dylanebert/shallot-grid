@@ -5,7 +5,7 @@
     "scene": "scenes/main.scene",
     "plugins": {
         "Orbit": true,
-        "Grid": "@dylanebert/shallot-grid",
+        "Grid": "../../src/index.ts",
         "WorldGridHarness": "./src/harness"
     }
 }
