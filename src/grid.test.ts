@@ -1,4 +1,5 @@
 import { srgbToLinear } from "@dylanebert/shallot";
+import { compileWgsl } from "@dylanebert/shallot/harness";
 import { check } from "@dylanebert/shallot/harness/check";
 import { GRID_DEFAULTS, type GridStyle, packGrid } from "./index";
 import { GRID_AT, GRID_BYTES, GRID_FLOATS, GRID_SHADER } from "./shader";
@@ -121,6 +122,20 @@ check(
         const got = packed({ ...GRID_DEFAULTS, floor: 0.25 })[GRID_AT.floor];
         if (packed(GRID_DEFAULTS)[GRID_AT.floor] !== 1 || got !== 0.25)
             throw new Error(`floor packs ${packed(GRID_DEFAULTS)[GRID_AT.floor]} and ${got}`);
+    },
+);
+
+check(
+    "grid: WGSL compiles through the native Bun GPU seam",
+    {
+        claim: "the grid shader compiles through Dawn",
+        size: "integration",
+        requires: ["gpu"],
+        subject: "src/shader.ts",
+    },
+    async () => {
+        const error = await compileWgsl(GRID_SHADER);
+        if (error !== null) throw new Error(`grid shader failed to compile: ${error}`);
     },
 );
 

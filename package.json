@@ -45,6 +45,7 @@
         "@biomejs/biome": "^2.5.13",
         "@dylanebert/shallot": "^0.9.5",
         "@types/bun": "latest",
+        "bun-webgpu": "github:dylanebert/bun-webgpu#7b75d0440d2f22e2c9a1cb383d15529652c53d98",
         "@webgpu/types": "^0.1.72",
         "playwright": "^1.63.0",
         "typegpu": "~0.12.5",
