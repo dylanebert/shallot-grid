@@ -18,9 +18,9 @@ const FRAMES = [
 ].sort();
 
 check(
-    "the world-grid example draws neutral lines and all three axes at 0.5, 50 and 5000 m, keeps its look at the near, far and floor frames, keeps the Y axis whole under the lines, and hides behind the box unless xray",
+    "the world-grid example passes exactly its named grid frames",
     {
-        claim: "the grid vanishes at some camera height or drops an axis line",
+        claim: "a world-grid frame fails or goes missing",
         size: "integration",
         requires: ["chromium"],
         host: "mac",
