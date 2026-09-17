@@ -6,7 +6,7 @@ This repository develops `@dylanebert/shallot-grid` against the qualified Shallo
 github:dylanebert/shallot#70770cfc34d82fdd19cb705d8753bb6f093748d6
 ```
 
-The peer contract is `@dylanebert/shallot: ^0.10.0`. The exact Git identity belongs in `devDependencies` and in `bun.lock`; the peer range describes compatibility and is not the package used by this repository's gates.
+The exact Git identity belongs in `devDependencies` and in `bun.lock`; the peer range describes compatibility and is not the package used by this repository's gates.
 
 ## Package States
 
