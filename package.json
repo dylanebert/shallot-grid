@@ -45,9 +45,8 @@
         "@biomejs/biome": "^2.5.13",
         "@dylanebert/shallot": "github:dylanebert/shallot#70770cfc34d82fdd19cb705d8753bb6f093748d6",
         "@types/bun": "latest",
-        "bun-webgpu": "github:dylanebert/bun-webgpu#7b75d0440d2f22e2c9a1cb383d15529652c53d98",
         "@webgpu/types": "^0.1.72",
-        "playwright": "^1.63.0",
+        "bun-webgpu": "github:dylanebert/bun-webgpu#7b75d0440d2f22e2c9a1cb383d15529652c53d98",
         "typegpu": "~0.12.5",
         "typescript": "^7.0.2",
         "unplugin-typegpu": "~0.12.3"

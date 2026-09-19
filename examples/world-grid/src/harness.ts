@@ -11,7 +11,7 @@ import { type Capture, captureFrame } from "@dylanebert/shallot/harness/capture"
 import { computeViewProj } from "@dylanebert/shallot/render";
 import { Grid } from "../../../src/index";
 
-// Verification hook, not part of the recipe, with no row driving it until the device-seat item lands: poses the
+// Verification hook, not part of the recipe, with no row driving it: poses the
 // orbit camera at each height, captures the composited canvas, and classifies the frame's grid pixels.
 const HEIGHTS = [0.5, 50, 5000];
 // the scene's orbit pitch, restored after the frames that change it
