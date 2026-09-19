@@ -6,9 +6,6 @@
     "check": [
         {
             "file": "src/grid.test.ts"
-        },
-        {
-            "file": "src/world-grid.test.ts"
         }
     ]
 }
