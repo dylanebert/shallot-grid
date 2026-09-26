@@ -8,8 +8,8 @@ import {
     probePixels,
 } from "@dylanebert/shallot/harness";
 import { type Capture, captureFrame } from "@dylanebert/shallot/harness/capture";
-import { computeViewProj } from "@dylanebert/shallot/render";
-import { Grid } from "../../../src/index";
+import { computeViewProj } from "@dylanebert/shallot/rendering";
+import { Grid } from "@dylanebert/shallot-grid";
 
 // Verification hook, not part of the recipe, with no row driving it: poses the
 // orbit camera at each height, captures the composited canvas, and classifies the frame's grid pixels.

@@ -20,8 +20,8 @@ import {
     RenderPlugin,
     type View,
     Views,
-} from "@dylanebert/shallot/render";
-import { ColorSystem, SearPlugin } from "@dylanebert/shallot/sear";
+} from "@dylanebert/shallot/rendering";
+import { ColorSystem, SearPlugin } from "@dylanebert/shallot/standard/rendering";
 import { GRID_AT, GRID_BYTES, GRID_FLOATS, GRID_SHADER } from "./shader";
 
 /**

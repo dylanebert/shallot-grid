@@ -32,9 +32,8 @@
         "!src/**/*.test.ts"
     ],
     "scripts": {
-        "check": "tsc --noEmit && biome check && shallot check",
-        "list": "shallot list",
-        "workflow": "shallot workflow",
+        "check": "tsc --noEmit && biome check && shallot test --list",
+        "list": "shallot test --list",
         "test": "shallot test"
     },
     "peerDependencies": {
@@ -43,7 +42,8 @@
     },
     "devDependencies": {
         "@biomejs/biome": "^2.5.13",
-        "@dylanebert/shallot": "github:dylanebert/shallot#70770cfc34d82fdd19cb705d8753bb6f093748d6",
+        "@dylanebert/shallot": "github:dylanebert/shallot#9a515f51bc0222242bda4ee25693fdac370a9b19",
+        "@dylanebert/shallot-grid": "link:.",
         "@types/bun": "latest",
         "@webgpu/types": "^0.1.72",
         "bun-webgpu": "github:dylanebert/bun-webgpu#7b75d0440d2f22e2c9a1cb383d15529652c53d98",
