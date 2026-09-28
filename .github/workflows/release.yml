@@ -24,4 +24,10 @@ jobs:
       - name: Publish
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: bun publish --access public
+        run: |
+          PACKAGE_VERSION="$(jq -r .version package.json)"
+          publish_args=(--access public)
+          if [[ "$PACKAGE_VERSION" == *-* ]]; then
+            publish_args+=(--tag next)
+          fi
+          bun publish "${publish_args[@]}"
