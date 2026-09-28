@@ -37,4 +37,4 @@ axes are drawn 1 px wide, the same as grid lines, so color and alpha are the onl
 - `floor`: the smallest cell in metres; no finer decade draws, and closer in that level grows on screen.
 - `xray`: how much of the grid draws through scene geometry, from `0` to `1`. At `0` objects hide the grid behind them, at `1` it draws over them, and values in between ghost it.
 
-the example: `bunx shallot dev examples/world-grid`. changing it: [`CONTRIBUTING.md`](CONTRIBUTING.md). mit.
+the example: `cd examples/world-grid && bun run dev`. changing it: [`CONTRIBUTING.md`](CONTRIBUTING.md). mit.

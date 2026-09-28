@@ -29,12 +29,14 @@
     },
     "files": [
         "src",
-        "!src/**/*.test.ts"
+        "!src/**/*.test.ts",
+        "!src/**/*.gpu.ts"
     ],
     "scripts": {
-        "check": "tsc --noEmit && biome check && shallot test --list",
-        "list": "shallot test --list",
-        "test": "shallot test"
+        "check": "tsc --noEmit && tsc --noEmit -p examples/world-grid/tsconfig.json && biome check",
+        "test": "bun test --timeout=250",
+        "test:gpu": "bun test ./src/grid.gpu.ts",
+        "test:browser": "bun run --cwd examples/world-grid test:browser"
     },
     "peerDependencies": {
         "@dylanebert/shallot": "^0.10.0",
@@ -42,14 +44,13 @@
     },
     "devDependencies": {
         "@biomejs/biome": "^2.5.13",
-        "@dylanebert/shallot": "github:dylanebert/shallot#9a515f51bc0222242bda4ee25693fdac370a9b19",
+        "@dylanebert/shallot": "github:dylanebert/shallot#e5870e50b276777046224ffc513cc229c3610ea8",
         "@dylanebert/shallot-grid": "link:.",
         "@types/bun": "latest",
         "@webgpu/types": "^0.1.72",
         "bun-webgpu": "github:dylanebert/bun-webgpu#7b75d0440d2f22e2c9a1cb383d15529652c53d98",
         "typegpu": "~0.12.5",
-        "typescript": "^7.0.2",
-        "unplugin-typegpu": "~0.12.3"
+        "typescript": "^7.0.2"
     },
     "workspaces": [
         "examples/*"

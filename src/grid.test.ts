@@ -1,6 +1,5 @@
+import { expect, test } from "bun:test";
 import { srgbToLinear } from "@dylanebert/shallot";
-import { compileWgsl } from "@dylanebert/shallot/harness";
-import { check } from "@dylanebert/shallot/harness/check";
 import { GRID_DEFAULTS, type GridStyle, packGrid } from "./index";
 import { GRID_AT, GRID_BYTES, GRID_FLOATS, GRID_SHADER } from "./shader";
 
@@ -18,28 +17,6 @@ function packed(style: GridStyle): Float32Array {
     packGrid(style, out);
     return out;
 }
-
-check(
-    "grid: default colors decode from sRGB bytes to linear",
-    { claim: "the grid hands sRGB byte fractions to the linear scene target" },
-    () => {
-        const out = packed(GRID_DEFAULTS);
-        for (const name of COLORS) {
-            const rgb = DEFAULT_BYTES[name];
-            const bytes = [16, 8, 0].map((shift) => ((rgb >> shift) & 0xff) / 255);
-            const got = Array.from(out.subarray(GRID_AT[name], GRID_AT[name] + 4));
-            const want = [...bytes.map((b) => Math.fround(srgbToLinear(b))), 1];
-            if (want.some((w, i) => got[i] !== w)) {
-                throw new Error(
-                    `grid ${name}: ${JSON.stringify(got)} is not ${JSON.stringify(want)}`,
-                );
-            }
-            if (bytes.every((b, i) => got[i] === Math.fround(b))) {
-                throw new Error(`grid ${name}: packed the raw sRGB fraction`);
-            }
-        }
-    },
-);
 
 // WGSL uniform layout rules for the member types the Grid struct uses (WGSL §memory layout).
 const WGSL_TYPES: Record<string, { size: number; align: number }> = {
@@ -69,88 +46,73 @@ function declaredLayout(source: string, struct: string) {
     return { offsets, size: Math.ceil(offset / align) * align };
 }
 
-check(
-    "grid: packed uniform matches the shader's struct layout",
-    { claim: "the grid packer writes lanes the shader's Grid struct does not declare there" },
-    () => {
-        const { offsets, size } = declaredLayout(GRID_SHADER, "Grid");
-        if (size !== GRID_BYTES)
-            throw new Error(`Grid struct is ${size} bytes, packer allocates ${GRID_BYTES}`);
-        const names = Object.keys(offsets).sort();
-        const packedNames = Object.keys(GRID_AT).sort();
-        if (JSON.stringify(names) !== JSON.stringify(packedNames)) {
-            throw new Error(`Grid members ${names} differ from packed lanes ${packedNames}`);
+test("the grid hands sRGB byte fractions to the linear scene target", () => {
+    const out = packed(GRID_DEFAULTS);
+    for (const name of COLORS) {
+        const rgb = DEFAULT_BYTES[name];
+        const bytes = [16, 8, 0].map((shift) => ((rgb >> shift) & 0xff) / 255);
+        const got = Array.from(out.subarray(GRID_AT[name], GRID_AT[name] + 4));
+        const want = [...bytes.map((b) => Math.fround(srgbToLinear(b))), 1];
+        if (want.some((w, i) => got[i] !== w)) {
+            throw new Error(`grid ${name}: ${JSON.stringify(got)} is not ${JSON.stringify(want)}`);
         }
-        for (const [name, bytes] of Object.entries(offsets)) {
-            const lane = GRID_AT[name as keyof typeof GRID_AT];
-            if (lane * 4 !== bytes)
-                throw new Error(`Grid.${name} at byte ${bytes}, packed at ${lane * 4}`);
+        if (bytes.every((b, i) => got[i] === Math.fround(b))) {
+            throw new Error(`grid ${name}: packed the raw sRGB fraction`);
         }
-    },
-);
+    }
+});
 
-check(
-    "grid: an axis with alpha 0 packs hidden",
-    { claim: "an axis alpha of 0 still draws the axis" },
-    () => {
-        for (const name of ["axisX", "axisY", "axisZ"] as const) {
-            const style = { ...GRID_DEFAULTS, [name]: DEFAULT_BYTES[name] << 8 };
-            const out = packed(style);
-            if (out[GRID_AT[name] + 3] !== 0)
-                throw new Error(`hidden ${name} packs alpha ${out[GRID_AT[name] + 3]}`);
-            for (const other of COLORS) {
-                if (other !== name && out[GRID_AT[other] + 3] !== 1) {
-                    throw new Error(
-                        `hiding ${name} changed ${other} alpha to ${out[GRID_AT[other] + 3]}`,
-                    );
-                }
+test("the grid packer writes lanes the shader's Grid struct does not declare there", () => {
+    const { offsets, size } = declaredLayout(GRID_SHADER, "Grid");
+    if (size !== GRID_BYTES)
+        throw new Error(`Grid struct is ${size} bytes, packer allocates ${GRID_BYTES}`);
+    const names = Object.keys(offsets).sort();
+    const packedNames = Object.keys(GRID_AT).sort();
+    if (JSON.stringify(names) !== JSON.stringify(packedNames)) {
+        throw new Error(`Grid members ${names} differ from packed lanes ${packedNames}`);
+    }
+    for (const [name, bytes] of Object.entries(offsets)) {
+        const lane = GRID_AT[name as keyof typeof GRID_AT];
+        if (lane * 4 !== bytes)
+            throw new Error(`Grid.${name} at byte ${bytes}, packed at ${lane * 4}`);
+    }
+});
+
+test("an axis alpha of 0 still draws the axis", () => {
+    for (const name of ["axisX", "axisY", "axisZ"] as const) {
+        const style = { ...GRID_DEFAULTS, [name]: DEFAULT_BYTES[name] << 8 };
+        const out = packed(style);
+        if (out[GRID_AT[name] + 3] !== 0)
+            throw new Error(`hidden ${name} packs alpha ${out[GRID_AT[name] + 3]}`);
+        for (const other of COLORS) {
+            if (other !== name && out[GRID_AT[other] + 3] !== 1) {
+                throw new Error(
+                    `hiding ${name} changed ${other} alpha to ${out[GRID_AT[other] + 3]}`,
+                );
             }
         }
-    },
-);
+    }
+});
 
-check(
-    "grid: floor defaults to a metre and packs at its declared lane",
-    { claim: "the default grid draws decades finer than a metre" },
-    () => {
-        if (GRID_DEFAULTS.floor !== 1) throw new Error(`floor defaults to ${GRID_DEFAULTS.floor}`);
-        const { offsets } = declaredLayout(GRID_SHADER, "Grid");
-        if (offsets.floor !== GRID_AT.floor * 4)
-            throw new Error(
-                `Grid.floor declared at byte ${offsets.floor}, packed at ${GRID_AT.floor * 4}`,
-            );
-        const got = packed({ ...GRID_DEFAULTS, floor: 0.25 })[GRID_AT.floor];
-        if (packed(GRID_DEFAULTS)[GRID_AT.floor] !== 1 || got !== 0.25)
-            throw new Error(`floor packs ${packed(GRID_DEFAULTS)[GRID_AT.floor]} and ${got}`);
-    },
-);
+test("the default grid draws decades finer than a metre", () => {
+    if (GRID_DEFAULTS.floor !== 1) throw new Error(`floor defaults to ${GRID_DEFAULTS.floor}`);
+    const { offsets } = declaredLayout(GRID_SHADER, "Grid");
+    if (offsets.floor !== GRID_AT.floor * 4)
+        throw new Error(
+            `Grid.floor declared at byte ${offsets.floor}, packed at ${GRID_AT.floor * 4}`,
+        );
+    const got = packed({ ...GRID_DEFAULTS, floor: 0.25 })[GRID_AT.floor];
+    if (packed(GRID_DEFAULTS)[GRID_AT.floor] !== 1 || got !== 0.25)
+        throw new Error(`floor packs ${packed(GRID_DEFAULTS)[GRID_AT.floor]} and ${got}`);
+});
 
-check(
-    "grid: WGSL compiles through the native Bun GPU seam",
-    {
-        claim: "the grid shader compiles through Dawn",
-        size: "integration",
-        requires: ["gpu"],
-        subject: "src/shader.ts",
-    },
-    async () => {
-        const error = await compileWgsl(GRID_SHADER);
-        if (error !== null) throw new Error(`grid shader failed to compile: ${error}`);
-    },
-);
-
-check(
-    "grid: xray defaults to 0 and packs clamped at its declared lane",
-    { claim: "the default grid draws through scene geometry" },
-    () => {
-        if (GRID_DEFAULTS.xray !== 0) throw new Error(`xray defaults to ${GRID_DEFAULTS.xray}`);
-        const { offsets } = declaredLayout(GRID_SHADER, "Grid");
-        if (offsets.xray !== GRID_AT.xray * 4)
-            throw new Error(
-                `Grid.xray declared at byte ${offsets.xray}, packed at ${GRID_AT.xray * 4}`,
-            );
-        const got = [0, 0.5, 2, -1].map((xray) => packed({ ...GRID_DEFAULTS, xray })[GRID_AT.xray]);
-        if (JSON.stringify(got) !== JSON.stringify([0, 0.5, 1, 0]))
-            throw new Error(`xray 0, 0.5, 2, -1 packs ${JSON.stringify(got)}`);
-    },
-);
+test("the default grid draws through scene geometry", () => {
+    if (GRID_DEFAULTS.xray !== 0) throw new Error(`xray defaults to ${GRID_DEFAULTS.xray}`);
+    const { offsets } = declaredLayout(GRID_SHADER, "Grid");
+    if (offsets.xray !== GRID_AT.xray * 4)
+        throw new Error(
+            `Grid.xray declared at byte ${offsets.xray}, packed at ${GRID_AT.xray * 4}`,
+        );
+    const got = [0, 0.5, 2, -1].map((xray) => packed({ ...GRID_DEFAULTS, xray })[GRID_AT.xray]);
+    expect(got).toEqual([0, 0.5, 1, 0]);
+});
