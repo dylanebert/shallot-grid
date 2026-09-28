@@ -8,11 +8,12 @@ export default defineConfig({
     testMatch: "**/*.e2e.ts",
     fullyParallel: false,
     workers: 1,
-    timeout: 70_000,
-    globalTimeout: 70_000,
+    timeout: 10_000,
+    globalTimeout: 15_000,
     reporter: "list",
     use: {
         browserName: "chromium",
+        channel: "chromium", // avoid Playwright's software-only headless-shell build
         baseURL: "http://127.0.0.1:4174",
         viewport: { width: 1280, height: 720 },
         deviceScaleFactor: 1,
