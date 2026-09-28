@@ -1,19 +1,9 @@
 {
-    "compilerOptions": {
-        "lib": ["ESNext", "DOM"],
-        "target": "ESNext",
-        "module": "ESNext",
-        "moduleDetection": "force",
-        "moduleResolution": "bundler",
-        "verbatimModuleSyntax": true,
-        "resolveJsonModule": true,
-        "noEmit": true,
-        "strict": true,
-        "skipLibCheck": true,
-        "noFallthroughCasesInSwitch": true,
-        "noImplicitOverride": true,
-        "types": ["@webgpu/types", "bun"]
-    },
-    "include": ["src", "tests"],
-    "exclude": ["**/dist", "**/node_modules"]
+    "extends": "@dylanebert/shallot/tsconfig.json",
+    "include": [
+        "src",
+        "examples/world-grid/src",
+        "examples/world-grid/vite.config.ts",
+        "examples/world-grid/playwright.config.ts"
+    ]
 }

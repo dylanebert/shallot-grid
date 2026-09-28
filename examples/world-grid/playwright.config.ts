@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "playwright/test";
 
-const subject = fileURLToPath(new URL(".", import.meta.url));
+const root = fileURLToPath(new URL("../..", import.meta.url));
 
 export default defineConfig({
     testDir: "./src",
@@ -28,7 +28,7 @@ export default defineConfig({
     },
     webServer: {
         command: "bun run build && bun run preview --host 127.0.0.1 --port 4174 --strictPort",
-        cwd: subject,
+        cwd: root,
         url: "http://127.0.0.1:4174",
         reuseExistingServer: false,
         timeout: 120_000,
