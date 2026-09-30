@@ -10,23 +10,28 @@ name it in `shallot.json`:
 
 ```json
 {
-    "scene": "scenes/main.scene",
     "plugins": {
         "Grid": "@dylanebert/shallot-grid"
     }
 }
 ```
 
-add a `<a grid />` singleton to your scene:
+add a grid entity in your plugin's `initialize(world)`:
 
-```
-<a grid />
+```ts
+import { Grid } from "@dylanebert/shallot-grid";
+
+const grid = world.create();
+world.add(grid, Grid);
 ```
 
 every field is optional. Colors are sRGB hex with alpha (`0xRRGGBBAA`), and an axis with alpha `00` is hidden:
 
-```
-<a grid="neutral: 0x504945ff; axis-x: 0xcc241dff; axis-y: 0x6b9d65ff; axis-z: 0x458588ff; opacity: 1; fade: 20; cells: 40; floor: 1; xray: 0" />
+```ts
+world.add(grid, Grid, {
+    neutral: 0x504945ff, axisX: 0xcc241dff, axisY: 0x6b9d65ff, axisZ: 0x458588ff,
+    opacity: 1, fade: 20, cells: 40, floor: 1, xray: 0,
+});
 ```
 
 axes are drawn 1 px wide, the same as grid lines, so color and alpha are the only difference. The Y axis always draws over the grid lines, and below the ground it draws at half its alpha.
