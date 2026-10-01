@@ -7,6 +7,7 @@ import {
     Compute,
     f32,
     invert,
+    registration,
     sparse,
     Transform,
     u32,
@@ -191,12 +192,7 @@ const GridSystem: System = {
  */
 export const GridPlugin: Plugin = {
     name: "Grid",
-    components: { Grid },
-    traits: {
-        Grid: {
-            defaults: () => ({ ...GRID_DEFAULTS }),
-        },
-    },
+    components: [registration("Grid", Grid, { defaults: () => ({ ...GRID_DEFAULTS }) })],
     systems: [GridSystem],
     dependencies: [RenderPlugin, SearPlugin, GlazePlugin],
 
