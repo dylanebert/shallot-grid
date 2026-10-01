@@ -256,5 +256,3 @@ export const GridPlugin: Plugin = {
         gpu.pipeline = null;
     },
 };
-
-export default GridPlugin;

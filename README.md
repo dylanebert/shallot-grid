@@ -6,14 +6,13 @@ an infinite world grid with axis lines for [shallot](https://github.com/dylanebe
 bun add @dylanebert/shallot-grid
 ```
 
-name it in `shallot.json`:
+import `GridPlugin` and add it to the app's `plugins`:
 
-```json
-{
-    "plugins": {
-        "Grid": "@dylanebert/shallot-grid"
-    }
-}
+```ts
+import { runApp } from "@dylanebert/shallot";
+import { GridPlugin } from "@dylanebert/shallot-grid";
+
+await runApp({ plugins: [GridPlugin] });
 ```
 
 add a grid entity in your plugin's `initialize(world)`:
