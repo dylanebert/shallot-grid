@@ -6,7 +6,6 @@ import {
     Camera,
     Compute,
     f32,
-    formatHex,
     invert,
     sparse,
     Transform,
@@ -195,14 +194,7 @@ export const GridPlugin: Plugin = {
     components: { Grid },
     traits: {
         Grid: {
-            singleton: true,
             defaults: () => ({ ...GRID_DEFAULTS }),
-            format: {
-                neutral: formatHex,
-                axisX: formatHex,
-                axisY: formatHex,
-                axisZ: formatHex,
-            },
         },
     },
     systems: [GridSystem],
