@@ -37,8 +37,7 @@
         "build": "vite build examples/world-grid",
         "preview": "vite preview examples/world-grid",
         "lint": "biome check",
-        "test": "bun test --timeout=250",
-        "test:browser": "playwright test -c examples/world-grid"
+        "test": "bun test --timeout=250"
     },
     "peerDependencies": {
         "@dylanebert/shallot": "^0.10.0-next.1"
