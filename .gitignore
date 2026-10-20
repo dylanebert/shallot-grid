@@ -1,7 +1,3 @@
 node_modules/
 *.tgz
 dist/
-**/test-results/
-
-# regenerable via tests/gen-fixtures.ts
-tests/fixtures/

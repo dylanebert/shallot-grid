@@ -1,9 +1,14 @@
 {
-    "extends": "@dylanebert/shallot/tsconfig.json",
-    "include": [
-        "src",
-        "examples/world-grid/src",
-        "examples/world-grid/vite.config.ts",
-        "examples/world-grid/playwright.config.ts"
-    ]
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "Preserve",
+        "moduleResolution": "Bundler",
+        "lib": ["ESNext", "DOM"],
+        "types": ["bun"],
+        "strict": true,
+        "skipLibCheck": true,
+        "noEmit": true,
+        "allowImportingTsExtensions": true
+    },
+    "include": ["src", "tests"]
 }

@@ -1,44 +1,42 @@
-# shallot-grid
+# Shallot Grid
 
-an infinite world grid with axis lines for [shallot](https://github.com/dylanebert/shallot). one fullscreen pass draws the y=0 plane, cross-fading between decade levels so it reads at any zoom without popping.
+Infinite world grid for [Shallot](https://github.com/dylanebert/shallot) 0.10.
 
-```bash
+```sh
 bun add @dylanebert/shallot-grid
 ```
 
-import `GridPlugin` and add it to the app's `plugins`:
+Add the plugin to your app's plugins and one entity to its world:
 
 ```ts
-import { runApp } from "@dylanebert/shallot";
-import { GridPlugin } from "@dylanebert/shallot-grid";
+import { Grid, GridPlugin } from "@dylanebert/shallot-grid";
 
-await runApp({ plugins: [GridPlugin] });
-```
+// In your app options:
+plugins: [GridPlugin, /* your other plugins */]
 
-add a grid entity in your plugin's `initialize(world)`:
-
-```ts
-import { Grid } from "@dylanebert/shallot-grid";
-
+// In your scene plugin's initialize(world):
 const grid = world.create();
 world.add(grid, Grid);
 ```
 
-every field is optional. Colors are sRGB hex with alpha (`0xRRGGBBAA`), and an axis with alpha `00` is hidden:
+The grid draws in every camera with `StandardRenderer`. It lies on Y=0 with
+coloured X, Y and Z axes. Opaque objects hide it; transparent objects draw over it.
 
-```ts
-world.add(grid, Grid, {
-    neutral: 0x504945ff, axisX: 0xcc241dff, axisY: 0x6b9d65ff, axisZ: 0x458588ff,
-    opacity: 1, fade: 20, cells: 40, floor: 1, xray: 0,
-});
-```
+Override fields in `world.add(grid, Grid, { ... })`:
 
-axes are drawn 1 px wide, the same as grid lines, so color and alpha are the only difference. The Y axis always draws over the grid lines, and below the ground it draws at half its alpha.
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `neutral` | `0x504945ff` | Grid line colour |
+| `axisX` | `0xcc241dff` | X axis colour |
+| `axisY` | `0x6b9d65ff` | Vertical Y axis colour |
+| `axisZ` | `0x458588ff` | Z axis colour |
+| `opacity` | `1` | Whole-grid opacity, 0–1 |
+| `fade` | `20` | Horizon reach in camera heights; 0 disables fading |
+| `cells` | `40` | Fine cells fade in from cells/10 to cells pixels |
+| `floor` | `1` | Smallest cell size in metres |
+| `xray` | `0` | Occluded opacity multiplier, 0–1 |
 
-- `opacity`: the whole grid's opacity.
-- `fade`: horizon fade reach in camera heights; `0` turns it off.
-- `cells`: pixels per cell at a decade boundary; the finest level fades in as its cells grow from `cells / 10` to `cells` pixels, so at `40` it is gone by 4 px and full by 40 px.
-- `floor`: the smallest cell in metres; no finer decade draws, and closer in that level grows on screen.
-- `xray`: how much of the grid draws through scene geometry, from `0` to `1`. At `0` objects hide the grid behind them, at `1` it draws over them, and values in between ghost it.
+Colours are sRGB `0xRRGGBBAA`; alpha `00` hides an axis.
 
-the example: `cd examples/world-grid && bun run dev`. changing it: [`CONTRIBUTING.md`](CONTRIBUTING.md). mit.
+Line antialiasing follows Ben Golus's *The Best Darn Grid Shader (Yet)*;
+decade weighting follows Blender's `overlay_grid_frag.glsl` pixel-size rule.

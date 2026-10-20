@@ -1,18 +1,15 @@
 # Contributing
 
-For anyone changing the grid, person or agent. Each API's contract is the JSDoc beside it. This page holds what the tree, the scripts and a failing check do not say.
-
-```bash
+```sh
 bun install --frozen-lockfile
+bun test tests/calculations.test.ts
+bun test tests/grid.gpu.test.ts
 bun check
 bun run lint
 bun run test
-bun test ./src/grid.gpu.ts
-bunx playwright test -c examples/world-grid
 ```
 
-- `src/` holds the plugin and shader. `*.test.ts` is the cheap Bun tier; `*.gpu.ts` is run by path as a named GPU tier.
-- `examples/world-grid` is a directory of this package: its Vite config uses `shallot()`, and its Playwright check runs against this package's Vite preview. The package owns the app scripts and dependencies; the example has no manifest or tsconfig of its own.
-- `bun check` runs the package's single TypeScript config; `lint` runs Biome. `test` runs the cheap tier under the engine's cheap ceiling; GPU checks run by path and browser checks with Playwright.
-- `peerDependencies` is the Shallot compatibility range, and the dev dependency supplies the pinned prerelease for development and tests. The Bun tests do not load engine TGSL, so they need no Bun preload. A project owns its page and Vite config; `shallot()` supplies the engine transform and project integration, so do not add a second TypeGPU plugin or Shallot/typegpu `optimizeDeps` or `dedupe` entries.
-- Publish a version from a commit whose `package.json` contains it, with one `v<version>` tag per published version: push the tag, then run `bun publish --access public`, adding `--tag next` for a hyphenated version so it never becomes `latest`. `main` carries the next unpublished version and moves forward after each publish.
+- Import Shallot only through public exports; the dev dependency pins the published version and the peer dependency names the compatibility range
+- `tests/calculations.test.ts` checks colour decoding and decade selection; `tests/grid.gpu.test.ts` checks rendering on headless Dawn (`webgpu`), including both camera antialias modes
+- Show changed GPU assertions red by breaking their rendering rule and record those failures in the commit message
+- GPU state belongs to a world resource, never a module singleton
