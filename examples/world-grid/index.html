@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>World grid</title>
+    <style>html,body,canvas{width:100%;height:100%;margin:0}body{overflow:hidden;background:#191816}canvas{display:block}</style>
+</head>
+<body><canvas></canvas><script type="module">
+import { runApp } from '@dylanebert/shallot';
+import { ScenePlugin } from './src/scene';
+await runApp({ plugins: [ScenePlugin] });
+</script></body>
+</html>

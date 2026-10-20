@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>World grid, stepped</title><style>body{margin:0;background:#191816}canvas{display:block}</style></head>
+<body><canvas width="1280" height="720"></canvas><script type="module">
+import { createApp } from '@dylanebert/shallot';
+import { pointerWheel, pointerMove, pressButton, releaseButton } from '@dylanebert/shallot/input';
+import { Orbit } from '@dylanebert/shallot/extras';
+import { captureFrame } from '@dylanebert/shallot/rendering';
+import { Scene, ScenePlugin } from '../src/scene';
+const app = await createApp({ plugins: [ScenePlugin] });
+const world = app.world;
+const { camera } = world.resource(Scene);
+const orbit = world.storage(Orbit);
+const step = () => world.step(1/60);
+step(); step();
+window.orbitGrid = ({ wheel = 0, dx = 0, dy = 0 } = {}) => {
+    pointerWheel(world, wheel);
+    pressButton(world, 'left');
+    pointerMove(world, { x: 640, y: 360, deltaX: dx, deltaY: dy, hover: true });
+    step();
+    releaseButton(world, 'left');
+    for (let i = 0; i < 90; i++) step();
+    return { distance: orbit.distance.get(camera), yaw: orbit.yaw.get(camera), pitch: orbit.pitch.get(camera) };
+};
+window.captureGrid = async () => {
+    const pending = captureFrame(document.querySelector('canvas'));
+    world.step(0);
+    const frame = await pending;
+    const output = document.createElement('canvas');
+    output.width = frame.width;
+    output.height = frame.height;
+    output.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(frame.rgba), frame.width, frame.height), 0, 0);
+    return output.toDataURL('image/png');
+};
+</script></body></html>
