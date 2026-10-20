@@ -201,6 +201,51 @@ for (const aa of [0, 1]) {
         TIMEOUT.startup,
     );
     test(
+        `a view scaled from 30 m to 3 km draws the same grid (antialias ${aa})`,
+        async () => {
+            const s = await scene(aa);
+            try {
+                const style = s.app.world.storage(Grid);
+                style.neutral.set(s.grid, 0xffffffff);
+                style.fade.set(s.grid, 20);
+                // The world-grid example's orbit angle, looking at the origin.
+                const yaw = 0.7;
+                const pitch = 0.4;
+                const transform = s.app.world.storage(Transform);
+                transform.rotation.set(
+                    s.camera,
+                    -Math.cos(yaw / 2) * Math.sin(pitch / 2),
+                    Math.sin(yaw / 2) * Math.cos(pitch / 2),
+                    Math.sin(yaw / 2) * Math.sin(pitch / 2),
+                    Math.cos(yaw / 2) * Math.cos(pitch / 2),
+                );
+                const frame = async (distance: number) => {
+                    transform.translation.set(
+                        s.camera,
+                        distance * Math.cos(pitch) * Math.sin(yaw),
+                        distance * Math.sin(pitch),
+                        distance * Math.cos(pitch) * Math.cos(yaw),
+                    );
+                    return await s.pixels();
+                };
+                const mid = await frame(30);
+                const far = await frame(3000);
+                let total = 0;
+                let difference = 0;
+                for (let i = 0; i < mid.length; i++) {
+                    if (i % 4 === 3) continue;
+                    total += mid[i];
+                    difference += Math.abs(mid[i] - far[i]);
+                }
+                expect(total).toBeGreaterThan(128 * 128 * 3 * 10);
+                expect(difference / total).toBeLessThan(0.02);
+            } finally {
+                s.app.dispose();
+            }
+        },
+        TIMEOUT.startup,
+    );
+    test(
         `horizon fade loses distant coverage; fade zero retains it (antialias ${aa})`,
         async () => {
             const s = await scene(aa);

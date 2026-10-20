@@ -33,10 +33,6 @@ struct Style {
     let p = array(vec2f(-1,-1), vec2f(3,-1), vec2f(-1,3));
     return vec4f(p[i], 0, 1);
 }
-fn unproject(uv: vec2f, z: f32) -> vec3f {
-    let h = camera.inverse * vec4f(uv, z, 1);
-    return h.xyz / h.w;
-}
 fn line(coordinate: f32, derivative: f32) -> f32 {
     let footprint = max(derivative, 0.0000001);
     let width = clamp(footprint, 0.0, 0.5);
@@ -64,8 +60,12 @@ fn ink(color: vec4f, coverage: f32) -> vec4f {
 }
 @fragment fn fragment(@builtin(position) pixel: vec4f${multisampled ? ", @builtin(sample_index) sample: u32" : ""}) -> @location(0) vec4f {
     let uv = vec2f(pixel.x / camera.resolution.x * 2.0 - 1.0, 1.0 - pixel.y / camera.resolution.y * 2.0);
-    let start = unproject(uv, 1.0);
-    let ray = normalize(unproject(uv, 0.5) - start);
+    // Reverse-Z: z 1 is the near plane and z 0 the far plane, at infinity (w 0) in perspective. The ray is
+    // their homogeneous difference; two unprojected points beside a distant eye cancel to f32 noise.
+    let near = camera.inverse * vec4f(uv, 1, 1);
+    let far = camera.inverse * vec4f(uv, 0, 1);
+    let start = near.xyz / near.w;
+    let ray = normalize(far.xyz * near.w - near.xyz * far.w);
     let t = -start.y / select(ray.y, 1e-10, abs(ray.y) < 1e-10);
     let plane = start + ray * t;
     let footprint = fwidth(plane.xz);
