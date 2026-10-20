@@ -59,7 +59,7 @@ fn visibility(p: vec3f, scene: f32) -> f32 {
 // All intermediate colours are premultiplied. The vertical axis is always over the plane.
 fn over(a: vec4f, b: vec4f) -> vec4f { return a + b * (1.0 - a.a); }
 fn ink(color: vec4f, coverage: f32) -> vec4f {
-    let alpha = color.a * coverage * clamp(style.grid.x, 0.0, 1.0);
+    let alpha = color.a * coverage;
     return vec4f(color.rgb * alpha, alpha);
 }
 @fragment fn fragment(@builtin(position) pixel: vec4f${multisampled ? ", @builtin(sample_index) sample: u32" : ""}) -> @location(0) vec4f {
@@ -88,7 +88,7 @@ fn ink(color: vec4f, coverage: f32) -> vec4f {
     let lateral = (start.x * ray.z - start.z * ray.x) / sqrt(horizontal);
     let axisCoverage = 1.0 - smoothstep(0.0, max(fwidth(lateral), 1e-10), abs(lateral));
     let yVisible = select(0.0, visibility(vec3f(0, closest.y, 0), scene), axisT >= 0.0);
-    return over(ink(style.y, axisCoverage * yVisible * select(0.5, 1.0, closest.y >= 0.0)), result);
+    return over(ink(style.y, axisCoverage * yVisible * select(0.5, 1.0, closest.y >= 0.0)), result) * clamp(style.grid.x, 0.0, 1.0);
 }
 `
     );

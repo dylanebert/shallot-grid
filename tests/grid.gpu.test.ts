@@ -113,6 +113,26 @@ function object(s: Awaited<ReturnType<typeof scene>>, transparent = false) {
 }
 for (const aa of [0, 1]) {
     test(
+        `whole-grid opacity scales the composite at an axis overlap (antialias ${aa})`,
+        async () => {
+            const s = await scene(aa);
+            try {
+                const style = s.app.world.storage(Grid);
+                for (const field of ["neutral", "axisX", "axisY", "axisZ"] as const)
+                    style[field].set(s.grid, 0xffffffff);
+                // Near the projected origin, plane lines and all three axes overlap.
+                const full = energy(await s.pixels(), 62, 61, 63, 62);
+                expect(full).toBeGreaterThan(0.9);
+                style.opacity.set(s.grid, 0.5);
+                const half = energy(await s.pixels(), 62, 61, 63, 62);
+                expect(half / full).toBeCloseTo(0.5, 2);
+            } finally {
+                s.app.dispose();
+            }
+        },
+        TIMEOUT.startup,
+    );
+    test(
         `axes draw distinct colours and alpha 00 hides each (antialias ${aa})`,
         async () => {
             const s = await scene(aa);
