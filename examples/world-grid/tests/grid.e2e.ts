@@ -7,7 +7,7 @@ type GridWindow = Window & {
     captureGrid(): Promise<string>;
 };
 
-test("injected wheel and drag orbit from sub-metre to kilometres with grid and axes visible", async ({
+test("injected wheel and drag orbit from sub-meter to kilometers with grid and axes visible", async ({
     page,
 }, info) => {
     const errors: string[] = [];

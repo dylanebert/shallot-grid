@@ -7,7 +7,7 @@ import { openGpuApp } from "@dylanebert/shallot/testing/gpu";
 import { Scene, ScenePlugin } from "../src/scene";
 
 setDefaultTimeout(TIMEOUT.node);
-test("the composed app draws grid lines and coloured axes while orbit zooms", async () => {
+test("the composed app draws grid lines and colored axes while orbit zooms", async () => {
     const app = await openGpuApp({ plugins: [ScenePlugin] });
     try {
         const { camera } = app.world.resource(Scene);

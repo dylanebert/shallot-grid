@@ -14,7 +14,7 @@ bun run test
 ```
 
 - Import Shallot only through public exports; the dev dependency pins the published version and the peer dependency names the compatibility range
-- `tests/calculations.test.ts` checks colour decoding and decade selection; `tests/grid.gpu.test.ts` checks rendering on headless Dawn (`webgpu`), including both camera antialias modes
+- `tests/calculations.test.ts` checks color decoding and decade selection; `tests/grid.gpu.test.ts` checks rendering on headless Dawn (`webgpu`), including both camera antialias modes
 - Show changed GPU assertions red by breaking their rendering rule and record those failures in the commit message
 - GPU state belongs to a world resource, never a module singleton
 - `examples/world-grid` is a copyable app: its scene check sits beside its plugin, its composed rendering goal is `tests/grid.node.ts`, and its stepped browser check injects input through Shallot's input API and writes `near.png`, `mid.png` and `far.png` to Playwright's output directory

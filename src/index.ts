@@ -20,7 +20,7 @@ import { draw, setRenderBindGroup, setRenderPipeline } from "@dylanebert/shallot
 import { color } from "./calculations";
 import { shader } from "./shader";
 
-/** One per world; colours are sRGB 0xRRGGBBAA. Alpha 00 hides an axis. */
+/** One per world; colors are sRGB 0xRRGGBBAA. Alpha 00 hides an axis. */
 export const Grid = component(
     "Grid",
     {
@@ -34,7 +34,7 @@ export const Grid = component(
         fade: f32,
         /** Fine cells fade in between cells/10 and cells pixels. */
         cells: f32,
-        /** Smallest cell size in metres. */
+        /** Smallest cell size in meters. */
         floor: f32,
         /** Occluded opacity multiplier, 0..1. */
         xray: f32,

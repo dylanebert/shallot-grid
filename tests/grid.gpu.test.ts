@@ -133,7 +133,7 @@ for (const aa of [0, 1]) {
         TIMEOUT.startup,
     );
     test(
-        `axes draw distinct colours and alpha 00 hides each (antialias ${aa})`,
+        `axes draw distinct colors and alpha 00 hides each (antialias ${aa})`,
         async () => {
             const s = await scene(aa);
             try {
@@ -185,7 +185,7 @@ for (const aa of [0, 1]) {
                 planeOnly(s);
                 s.app.world.storage(Grid).floor.set(s.grid, 0.001);
                 let previous = 0;
-                // At this height a one-metre cell spans 40 pixels: the .1 -> 1 decade boundary.
+                // At this height a one-meter cell spans 40 pixels: the .1 -> 1 decade boundary.
                 for (let i = 0; i <= 40; i++) {
                     const height = (128 / (80 * Math.tan(Math.PI / 6))) * (0.9 + i * 0.005);
                     top(s, height);

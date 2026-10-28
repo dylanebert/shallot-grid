@@ -22,7 +22,7 @@ struct Style {
     x: vec4f,
     y: vec4f,
     z: vec4f,
-    // opacity, fade, pixels per cell, finest cell in metres
+    // opacity, fade, pixels per cell, finest cell in meters
     grid: vec4f,
     xray: vec4f,
 }
@@ -52,7 +52,7 @@ fn visibility(p: vec3f, scene: f32) -> f32 {
     if (clip.w <= 0.0 || clip.z > clip.w) { return 0.0; }
     return select(1.0, clamp(style.xray.x, 0.0, 1.0), max(clip.z / clip.w, 0.0) + 1e-6 < scene);
 }
-// All intermediate colours are premultiplied. The vertical axis is always over the plane.
+// All intermediate colors are premultiplied. The vertical axis is always over the plane.
 fn over(a: vec4f, b: vec4f) -> vec4f { return a + b * (1.0 - a.a); }
 fn ink(color: vec4f, coverage: f32) -> vec4f {
     let alpha = color.a * coverage;

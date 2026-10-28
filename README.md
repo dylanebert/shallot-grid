@@ -20,23 +20,23 @@ world.add(grid, Grid);
 ```
 
 The grid draws in every camera with `StandardRenderer`. It lies on Y=0 with
-coloured X, Y and Z axes. Opaque objects hide it; transparent objects draw over it.
+colored X, Y and Z axes. Opaque objects hide it; transparent objects draw over it.
 
 Override fields in `world.add(grid, Grid, { ... })`:
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `neutral` | `0x504945ff` | Grid line colour |
-| `axisX` | `0xcc241dff` | X axis colour |
-| `axisY` | `0x6b9d65ff` | Vertical Y axis colour |
-| `axisZ` | `0x458588ff` | Z axis colour |
+| `neutral` | `0x504945ff` | Grid line color |
+| `axisX` | `0xcc241dff` | X axis color |
+| `axisY` | `0x6b9d65ff` | Vertical Y axis color |
+| `axisZ` | `0x458588ff` | Z axis color |
 | `opacity` | `1` | Whole-grid opacity, 0–1 |
 | `fade` | `20` | Horizon reach in camera heights; 0 disables fading |
 | `cells` | `40` | Fine cells fade in from cells/10 to cells pixels |
-| `floor` | `1` | Smallest cell size in metres |
+| `floor` | `1` | Smallest cell size in meters |
 | `xray` | `0` | Occluded opacity multiplier, 0–1 |
 
-Colours are sRGB `0xRRGGBBAA`; alpha `00` hides an axis.
+Colors are sRGB `0xRRGGBBAA`; alpha `00` hides an axis.
 
 Line antialiasing follows Ben Golus's *The Best Darn Grid Shader (Yet)*;
 decade weighting follows Blender's `overlay_grid_frag.glsl` pixel-size rule.
